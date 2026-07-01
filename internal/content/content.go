@@ -1,9 +1,13 @@
 package content
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 )
+
+//go:embed data/*.json
+var dataFiles embed.FS
 
 type Producer struct {
 	Key         string  `json:"key"`
@@ -276,11 +280,11 @@ func init() {
 }
 
 func mustLoad(name string, dst any) {
-	raw, ok := dataFiles[name]
-	if !ok {
-		panic(fmt.Sprintf("content: reading %s: not found", name))
+	raw, err := dataFiles.ReadFile(name)
+	if err != nil {
+		panic(fmt.Sprintf("content: reading %s: %v", name, err))
 	}
-	if err := json.Unmarshal([]byte(raw), dst); err != nil {
+	if err := json.Unmarshal(raw, dst); err != nil {
 		panic(fmt.Sprintf("content: parsing %s: %v", name, err))
 	}
 }
