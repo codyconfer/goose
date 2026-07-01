@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+APPDIR="${APPDIR:-$(dirname "$(readlink -f "$0")")}"
+exec "$APPDIR/usr/bin/goose" "$@"

@@ -1,0 +1,39 @@
+{
+  "level_pace": {
+    "label": "Level Pace",
+    "desc": "How long the climb to each new level takes.",
+    "default": 1,
+    "options": [
+      { "label": "FAST", "mult": 0.5 },
+      { "label": "STANDARD", "mult": 1.0 },
+      { "label": "LONG", "mult": 2.5 },
+      { "label": "EXTREMELY LONG", "mult": 6.0 },
+      { "label": "ETERNAL", "mult": 20.0 }
+    ]
+  },
+  "event_pace": {
+    "label": "Event Pace",
+    "desc": "Frequency of events and character encounters.",
+    "default": 2,
+    "options": [
+      { "label": "Rarely", "mult": 0.35 },
+      { "label": "Sparsely", "mult": 0.65 },
+      { "label": "Common", "mult": 1.0 },
+      { "label": "Often", "mult": 1.75 },
+      { "label": "Deluge", "mult": 3.0 }
+    ]
+  },
+  "market_pace": {
+    "label": "Market Pace",
+    "desc": "How fast your assets grow!",
+    "default": 2,
+    "options": [
+      { "label": "DotCom bubble", "mult": 0.5 },
+      { "label": "Web 2.0", "mult": 0.75 },
+      { "label": "BLOCKCHAIN", "mult": 1.0 },
+      { "label": "AI HYPERSCALERS", "mult": 2.0 },
+      { "label": "DATACENTERS IN SPACE", "mult": 5.0 },
+      { "label": "SINGULARITY GOONING", "mult": 25.0 }
+    ]
+  }
+}

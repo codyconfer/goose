@@ -1,0 +1,33 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - unconvert
+    - bodyclose
+  exclusions:
+    generated: lax
+    rules:
+      # Test files may ignore errors and use looser patterns.
+      - path: _test\.go
+        linters:
+          - errcheck
+      # `x := lookup(); if x == nil { t.Fatal() }; x.Foo()` is a standard test
+      # idiom; staticcheck doesn't treat t.Fatal as terminating here.
+      - path: _test\.go
+        text: "SA5011"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/codyconfer/goose

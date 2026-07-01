@@ -1,0 +1,5 @@
+[
+  { "key": "click", "name": "Enter the Flow State", "icon": "🧘", "desc": "Double the tokens you earn per tap. You, locked in and 'building' at 2am, deep in the flow — allegedly.",                  "base_cost": 50,   "growth": 8 },
+  { "key": "crier", "name": "Jet Set Huang",        "icon": "🧥", "desc": "He zips up the magical leather jacket, takes the stage, and consumers pay ~30% more per egg. It's not a bubble if the keynote is good enough.", "base_cost": 150,  "growth": 7 },
+  { "key": "blitz", "name": "Blitzscaling",  "icon": "🌀",  "desc": "Every producer outputs +25% per level. Grow at all costs, worry about unit economics never.",               "base_cost": 4000, "growth": 6 }
+]

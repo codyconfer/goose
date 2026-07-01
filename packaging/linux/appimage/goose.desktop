@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Goose
+Comment=Terminal idle-clicker economy game
+Exec=goose
+Icon=goose
+Terminal=true
+Categories=Game;

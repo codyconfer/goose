@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: format, lint, and test Go changes.
+# Enabled via `git config core.hooksPath .githooks` (run `make hooks`).
+set -euo pipefail
+
+# Make Go-installed tools (golangci-lint) reachable even when the committing
+# shell doesn't have GOPATH/bin on PATH.
+if command -v go >/dev/null 2>&1; then
+	export PATH="$PATH:$(go env GOPATH)/bin"
+fi
+
+staged_go=$(git diff --cached --name-only --diff-filter=ACM -- '*.go' || true)
+if [ -z "$staged_go" ]; then
+	exit 0
+fi
+
+echo "▶ gofmt"
+unformatted=$(gofmt -l $staged_go || true)
+if [ -n "$unformatted" ]; then
+	echo "  formatting the following files (re-staging):"
+	echo "$unformatted" | sed 's/^/    /'
+	gofmt -w $unformatted
+	git add $unformatted
+fi
+
+echo "▶ go vet"
+go vet ./...
+
+if command -v golangci-lint >/dev/null 2>&1; then
+	echo "▶ golangci-lint"
+	golangci-lint run
+else
+	echo "▶ golangci-lint (not installed — skipping; run 'make hooks' setup or install it)"
+fi
+
+echo "▶ go test"
+go test ./...
+
+echo "✓ pre-commit checks passed"
