@@ -166,6 +166,44 @@ func TestEggPriceTrigger(t *testing.T) {
 	}
 }
 
+func TestChanceTriggerScaledByPaceAndBaseScale(t *testing.T) {
+	rawP := 0.05
+	const trials = 20000
+	const tolerance = 0.02
+
+	cases := []struct {
+		name string
+		idx  int
+	}{
+		{"Rarely", 0},
+		{"Sparsely", 1},
+		{"Common", 2},
+		{"Often", 3},
+		{"Deluge", 4},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			s := economy.NewState()
+			s.Settings = economy.DefaultSettings().WithEvent(c.idx)
+			mult := s.Settings.EventMult()
+			want := chanceP(rawP) * mult
+
+			trig := ChanceTrigger{P: chanceP(rawP)}
+			r := rand.New(rand.NewSource(42))
+			fires := 0
+			for i := 0; i < trials; i++ {
+				if trig.Fires(s, r) {
+					fires++
+				}
+			}
+			if got := float64(fires) / float64(trials); got < want-tolerance || got > want+tolerance {
+				t.Fatalf("%s: observed fire rate %.4f, want ~%.4f (rawP=%v * chanceBaseScale=%v * mult=%v)",
+					c.name, got, want, rawP, chanceBaseScale, mult)
+			}
+		})
+	}
+}
+
 func TestReconcile(t *testing.T) {
 	saved := Events
 	defer func() { Events = saved }()

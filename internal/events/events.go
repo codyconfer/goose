@@ -15,10 +15,14 @@ type Event struct {
 	Apply   func(s economy.State, r *rand.Rand) Outcome
 }
 
+const chanceBaseScale = 0.35
+
+func chanceP(p float64) float64 { return p * chanceBaseScale }
+
 var Events = []Event{
 	{
 		Key:     "lucky_egg",
-		Trigger: ChanceTrigger{P: 0.024},
+		Trigger: ChanceTrigger{P: chanceP(0.024)},
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			gain := s.PerClick * float64(3+r.Intn(5))
 			if gain < 5 {
@@ -33,7 +37,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "golden_hour",
-		Trigger: ChanceTrigger{P: 0.009},
+		Trigger: ChanceTrigger{P: chanceP(0.009)},
 		CanFire: func(s economy.State) bool { return s.TotalEarned > 50 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			base := s.TokensPerSecond()*45 + s.PerClick*20
@@ -50,7 +54,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "market_boom",
-		Trigger: ChanceTrigger{P: 0.009},
+		Trigger: ChanceTrigger{P: chanceP(0.009)},
 		CanFire: func(s economy.State) bool { return s.TokensPerSecond() > 0 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			gain := s.TokensPerSecond() * float64(60+r.Intn(60))
@@ -63,7 +67,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "wandering_goose",
-		Trigger: ChanceTrigger{P: 0.006},
+		Trigger: ChanceTrigger{P: chanceP(0.006)},
 		CanFire: func(s economy.State) bool { return s.TotalEarned > 120 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			return outcome(
@@ -75,7 +79,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "market_day",
-		Trigger: ChanceTrigger{P: 0.0108},
+		Trigger: ChanceTrigger{P: chanceP(0.0108)},
 		CanFire: func(s economy.State) bool { return s.Tokens > 20 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			price := economy.BasePrice * (0.3 + r.Float64()*0.3)
@@ -90,7 +94,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "fox_raid",
-		Trigger: ChanceTrigger{P: 0.009},
+		Trigger: ChanceTrigger{P: chanceP(0.009)},
 		CanFire: func(s economy.State) bool { return s.Tokens > 50 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			loss := s.Tokens * (0.08 + r.Float64()*0.12)
@@ -114,7 +118,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "flash_crash",
-		Trigger: ChanceTrigger{P: 0.01},
+		Trigger: ChanceTrigger{P: chanceP(0.01)},
 		CanFire: func(s economy.State) bool { return s.PriceFactor > 0.9 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			factor := 0.55 + r.Float64()*0.2
@@ -127,7 +131,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "melt_up",
-		Trigger: ChanceTrigger{P: 0.01},
+		Trigger: ChanceTrigger{P: chanceP(0.01)},
 		CanFire: func(s economy.State) bool { return s.PriceFactor < 1.6 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			factor := 1.25 + r.Float64()*0.25
@@ -179,7 +183,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "circular_investment",
-		Trigger: ChanceTrigger{P: 0.008},
+		Trigger: ChanceTrigger{P: chanceP(0.008)},
 		CanFire: func(s economy.State) bool { return s.TotalEarned > 5000 },
 		Apply: pick(
 			br(0.7, func(s economy.State, r *rand.Rand) Outcome {
@@ -202,7 +206,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "roi_reckoning",
-		Trigger: ChanceTrigger{P: 0.007},
+		Trigger: ChanceTrigger{P: chanceP(0.007)},
 		CanFire: func(s economy.State) bool { return s.TotalEarned > 3000 && s.Tokens > 100 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			loss := s.Tokens * (0.1 + r.Float64()*0.15)
@@ -215,7 +219,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "token_burn",
-		Trigger: ChanceTrigger{P: 0.01},
+		Trigger: ChanceTrigger{P: chanceP(0.01)},
 		CanFire: func(s economy.State) bool { return s.Tokens > 200 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			loss := s.Tokens * (0.05 + r.Float64()*0.1)
@@ -228,7 +232,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "gpu_shortage",
-		Trigger: ChanceTrigger{P: 0.009},
+		Trigger: ChanceTrigger{P: chanceP(0.009)},
 		CanFire: func(s economy.State) bool { return s.Tokens > 1000 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			loss := s.Tokens * (0.06 + r.Float64()*0.1)
@@ -241,7 +245,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "vaporware_keynote",
-		Trigger: ChanceTrigger{P: 0.008},
+		Trigger: ChanceTrigger{P: chanceP(0.008)},
 		CanFire: func(s economy.State) bool { return s.TotalEarned > 2000 },
 		Apply: pick(
 			br(0.72, func(s economy.State, r *rand.Rand) Outcome {
@@ -263,7 +267,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "chip_delay",
-		Trigger: ChanceTrigger{P: 0.007},
+		Trigger: ChanceTrigger{P: chanceP(0.007)},
 		CanFire: func(s economy.State) bool { return s.TotalEarned > 5000 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			return outcome(
@@ -311,7 +315,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "open_weights_dump",
-		Trigger: ChanceTrigger{P: 0.008},
+		Trigger: ChanceTrigger{P: chanceP(0.008)},
 		CanFire: func(s economy.State) bool { return s.TotalEarned > 4000 && s.PriceFactor > 0.8 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			factor := 0.72 + r.Float64()*0.15
@@ -324,7 +328,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "efficiency_memo",
-		Trigger: ChanceTrigger{P: 0.009},
+		Trigger: ChanceTrigger{P: chanceP(0.009)},
 		CanFire: func(s economy.State) bool { return s.TotalEarned > 3000 && s.Tokens > 100 },
 		Apply: pick(
 			br(0.6, func(s economy.State, r *rand.Rand) Outcome {
@@ -346,7 +350,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "superintelligence_blog",
-		Trigger: ChanceTrigger{P: 0.008},
+		Trigger: ChanceTrigger{P: chanceP(0.008)},
 		CanFire: func(s economy.State) bool { return s.TotalEarned > 6000 },
 		Apply: pick(
 			br(0.65, func(s economy.State, r *rand.Rand) Outcome {
@@ -368,7 +372,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "data_breach",
-		Trigger: ChanceTrigger{P: 0.007},
+		Trigger: ChanceTrigger{P: chanceP(0.007)},
 		CanFire: func(s economy.State) bool { return s.Tokens > 500 && s.Consumers > 5 },
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			fine := s.Tokens * (0.07 + r.Float64()*0.08)
@@ -381,7 +385,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "grid_strain",
-		Trigger: ChanceTrigger{P: 0.008},
+		Trigger: ChanceTrigger{P: chanceP(0.008)},
 		CanFire: func(s economy.State) bool { return s.Tokens > 2000 && s.Count("datacenter") > 0 },
 		Apply: pick(
 			br(0.6, func(s economy.State, r *rand.Rand) Outcome {
