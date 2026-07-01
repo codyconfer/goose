@@ -113,6 +113,8 @@ func (ts *tradeScreen) view(m *Model) string {
 			theme.EggSty.Render("🥚 "+economy.FormatNum(s.Eggs))+theme.DimSty.Render(" eggs")),
 		vk.Row(content.Text.Trade.MarketPriceLabel, theme.ValSty.Render(economy.FormatNum(s.EggPrice())+" tokens/egg")),
 		vk.Row(content.Text.Trade.ConsumersPayLabel, theme.CanSty.Render(economy.FormatNum(s.SellPrice())+" tokens/egg")),
+		vk.Row(content.Text.Trade.TrendLabel, tradeTrendLabel(s)),
+		vk.Row(content.Text.Trade.TrendStrengthLabel, tradeTrendStrength(s)),
 	)
 
 	hints := []([2]string){
@@ -258,6 +260,22 @@ func tradeVerb(k economy.TxKind) string {
 		return content.Text.Trade.VerbSell
 	}
 	return content.Text.Trade.VerbBuy
+}
+
+func tradeTrendLabel(s economy.State) string {
+	strength := s.TrendStrength()
+	switch {
+	case strength < 0.08:
+		return theme.DimSty.Render(content.Text.Trade.TrendSideways)
+	case s.PriceTrend > 0:
+		return theme.CanSty.Render(fmt.Sprintf(content.Text.Trade.TrendBullFmt, strength*100))
+	default:
+		return theme.CantSty.Render(fmt.Sprintf(content.Text.Trade.TrendBearFmt, strength*100))
+	}
+}
+
+func tradeTrendStrength(s economy.State) string {
+	return panels.Meter(s.TrendStrength(), 12) + " " + theme.DimSty.Render(fmt.Sprintf("%.0f%%", s.TrendStrength()*100))
 }
 
 func tradeCompletedMsg(o economy.Transaction) string {

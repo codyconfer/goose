@@ -108,7 +108,7 @@ var Events = []Event{
 	},
 	{
 		Key:     "margin_call",
-		Trigger: MarginTrigger{Chance: 0.35},
+		Trigger: MarginTrigger{Chance: 0.25},
 		Apply: func(s economy.State, r *rand.Rand) Outcome {
 			ev := content.Events.MarginCall
 			return outcome(

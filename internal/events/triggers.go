@@ -43,9 +43,20 @@ func (t EggPriceTrigger) Repeatable() bool { return true }
 type MarginTrigger struct{ Chance float64 }
 
 func (t MarginTrigger) Fires(s economy.State, r *rand.Rand) bool {
-	if !s.HasLosingLeverage() {
+	stress := s.MarginStress()
+	if stress <= 0 {
 		return false
 	}
-	return r != nil && r.Float64() < t.Chance
+	if t.Chance >= 1 {
+		return true
+	}
+	if r == nil {
+		return false
+	}
+	chance := t.Chance * (0.45 + 0.55*stress) * (0.75 + 0.25*s.TrendStrength())
+	if chance > 1 {
+		chance = 1
+	}
+	return r.Float64() < chance
 }
 func (t MarginTrigger) Repeatable() bool { return true }

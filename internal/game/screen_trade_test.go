@@ -99,7 +99,7 @@ func TestTradeDeskViewRenders(t *testing.T) {
 	m := New(econ, events.NewMachine(), 0)
 	m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
 	v := m.View()
-	for _, want := range []string{"TRADE DESK", "NEW ORDER", "TRADE QUEUE", "Buy"} {
+	for _, want := range []string{"TRADE DESK", "NEW ORDER", "TRADE QUEUE", "Buy", "trend engine"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("trade desk view missing %q", want)
 		}

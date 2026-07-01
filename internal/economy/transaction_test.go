@@ -85,6 +85,27 @@ func TestProcessSellOrderConvertsEggsToTokens(t *testing.T) {
 	}
 }
 
+func TestQueuedTradesPushTrend(t *testing.T) {
+	m := NewMachine()
+	m.s.Tokens = 1000
+	m.s.Consumers = 100
+	m.ScheduleTrade(TxBuyEggs, 40)
+
+	m.ProcessTransactions(100)
+	if m.s.PriceTrend <= 0 {
+		t.Fatalf("buy flow should push trend up, trend=%v", m.s.PriceTrend)
+	}
+
+	m = NewMachine()
+	m.gainEggs(100)
+	m.s.Consumers = 100
+	m.ScheduleTrade(TxSellEggs, 40)
+	m.ProcessTransactions(100)
+	if m.s.PriceTrend >= 0 {
+		t.Fatalf("sell flow should push trend down, trend=%v", m.s.PriceTrend)
+	}
+}
+
 func TestSellingEggsNeverDropsLevel(t *testing.T) {
 	m := NewMachine()
 	m.gainEggs(800)

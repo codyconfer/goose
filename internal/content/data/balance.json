@@ -14,6 +14,11 @@
   "price_trend_vol": 0.04,
   "price_trend_max": 0.12,
   "price_shock_trend": 0.08,
+  "price_trend_turbulence": 1.35,
+  "price_trend_reversion_drag": 1.15,
+  "price_cashflow_trend": 0.02,
+  "price_trade_trend": 0.03,
+  "price_derivative_trend": 0.035,
   "price_floor": 0.4,
   "price_ceil": 2.0,
 
@@ -24,10 +29,11 @@
   "trade_epsilon": 1e-6,
 
   "spec_unlock_level": 4,
-  "spec_expiry_seconds": 45,
-  "spec_margin_penalty": 0.25,
-  "spec_leverages": [1, 2, 5, 10],
-  "spec_premiums": [10, 50, 200, 1000, 10000],
+  "spec_expiry_seconds": 60,
+  "spec_margin_penalty": 0.4,
+  "spec_maintenance_margin": 0.35,
+  "spec_leverages": [1, 2, 5, 10, 20, 50],
+  "spec_premiums": [50, 250, 1000, 5000, 25000, 100000],
 
   "decommission_refund": 0.5,
   "ledger_max": 20,

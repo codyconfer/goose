@@ -33,16 +33,21 @@ type balanceData struct {
 	CrowdHeadroom    float64 `json:"crowd_headroom"`
 	CrowdAdjustRate  float64 `json:"crowd_adjust_rate"`
 
-	PriceHoardOnOffer float64 `json:"price_hoard_on_offer"`
-	PriceMinSupply    float64 `json:"price_min_supply"`
-	PriceAdjustRate   float64 `json:"price_adjust_rate"`
-	PriceVolatility   float64 `json:"price_volatility"`
-	PriceTrendDecay   float64 `json:"price_trend_decay"`
-	PriceTrendVol     float64 `json:"price_trend_vol"`
-	PriceTrendMax     float64 `json:"price_trend_max"`
-	PriceShockTrend   float64 `json:"price_shock_trend"`
-	PriceFloor        float64 `json:"price_floor"`
-	PriceCeil         float64 `json:"price_ceil"`
+	PriceHoardOnOffer       float64 `json:"price_hoard_on_offer"`
+	PriceMinSupply          float64 `json:"price_min_supply"`
+	PriceAdjustRate         float64 `json:"price_adjust_rate"`
+	PriceVolatility         float64 `json:"price_volatility"`
+	PriceTrendDecay         float64 `json:"price_trend_decay"`
+	PriceTrendVol           float64 `json:"price_trend_vol"`
+	PriceTrendMax           float64 `json:"price_trend_max"`
+	PriceShockTrend         float64 `json:"price_shock_trend"`
+	PriceTrendTurbulence    float64 `json:"price_trend_turbulence"`
+	PriceTrendReversionDrag float64 `json:"price_trend_reversion_drag"`
+	PriceCashflowTrend      float64 `json:"price_cashflow_trend"`
+	PriceTradeTrend         float64 `json:"price_trade_trend"`
+	PriceDerivativeTrend    float64 `json:"price_derivative_trend"`
+	PriceFloor              float64 `json:"price_floor"`
+	PriceCeil               float64 `json:"price_ceil"`
 
 	CrierBonusPerLevel float64 `json:"crier_bonus_per_level"`
 	BlitzBonusPerLevel float64 `json:"blitz_bonus_per_level"`
@@ -50,11 +55,12 @@ type balanceData struct {
 	TradeFloorRate float64 `json:"trade_floor_rate"`
 	TradeEpsilon   float64 `json:"trade_epsilon"`
 
-	SpecUnlockLevel   int       `json:"spec_unlock_level"`
-	SpecExpirySeconds float64   `json:"spec_expiry_seconds"`
-	SpecMarginPenalty float64   `json:"spec_margin_penalty"`
-	SpecLeverages     []float64 `json:"spec_leverages"`
-	SpecPremiums      []float64 `json:"spec_premiums"`
+	SpecUnlockLevel       int       `json:"spec_unlock_level"`
+	SpecExpirySeconds     float64   `json:"spec_expiry_seconds"`
+	SpecMarginPenalty     float64   `json:"spec_margin_penalty"`
+	SpecMaintenanceMargin float64   `json:"spec_maintenance_margin"`
+	SpecLeverages         []float64 `json:"spec_leverages"`
+	SpecPremiums          []float64 `json:"spec_premiums"`
 
 	DecommissionRefund float64 `json:"decommission_refund"`
 	LedgerMax          int     `json:"ledger_max"`
@@ -175,6 +181,11 @@ type textData struct {
 		TrendFlat                string `json:"trend_flat"`
 		TrendUpFmt               string `json:"trend_up_fmt"`
 		TrendDownFmt             string `json:"trend_down_fmt"`
+		TrendLabel               string `json:"trend_label"`
+		TrendStrengthLabel       string `json:"trend_strength_label"`
+		TrendBullFmt             string `json:"trend_bull_fmt"`
+		TrendBearFmt             string `json:"trend_bear_fmt"`
+		TrendSideways            string `json:"trend_sideways"`
 		NowPrefix                string `json:"now_prefix"`
 		LedgerPanel              string `json:"ledger_panel"`
 		LedgerEmpty              string `json:"ledger_empty"`
@@ -196,6 +207,7 @@ type textData struct {
 		PursePanel      string `json:"purse_panel"`
 		PriceLabel      string `json:"price_label"`
 		ExposureLabel   string `json:"exposure_label"`
+		TrendLabel      string `json:"trend_label"`
 		TicketPanel     string `json:"ticket_panel"`
 		DirectionLabel  string `json:"direction_label"`
 		CallToggle      string `json:"call_toggle"`
@@ -204,6 +216,9 @@ type textData struct {
 		PutThesis       string `json:"put_thesis"`
 		PremiumLabel    string `json:"premium_label"`
 		LeverageLabel   string `json:"leverage_label"`
+		NotionalLabel   string `json:"notional_label"`
+		LiqPriceLabel   string `json:"liq_price_label"`
+		BufferLabel     string `json:"buffer_label"`
 		ExpiryLabel     string `json:"expiry_label"`
 		ExpiryFmt       string `json:"expiry_fmt"`
 		RiskLabel       string `json:"risk_label"`

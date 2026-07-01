@@ -68,3 +68,19 @@ func TestApplyWindfallSkipsZeroNet(t *testing.T) {
 		t.Fatalf("zero-net windfall recorded: %+v", m.s.Ledger)
 	}
 }
+
+func TestWindfallCashflowSeedsTrend(t *testing.T) {
+	m := NewMachine()
+
+	m.ApplyWindfall("📈 Pump", []Command{Earn(500)})
+	if m.s.PriceTrend <= 0 {
+		t.Fatalf("gain should seed bullish trend, trend=%v", m.s.PriceTrend)
+	}
+
+	m = NewMachine()
+	m.s.Tokens = 1000
+	m.ApplyWindfall("📉 Rug", []Command{Spend(500)})
+	if m.s.PriceTrend >= 0 {
+		t.Fatalf("loss should seed bearish trend, trend=%v", m.s.PriceTrend)
+	}
+}

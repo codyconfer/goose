@@ -60,8 +60,10 @@ func (m *Machine) apply(cmds []Command) {
 		switch c.Effect {
 		case EffectEarn:
 			m.earn(c.Amount)
+			m.trendFromCashflow(c.Amount)
 		case EffectSpend:
 			m.spend(c.Amount)
+			m.trendFromCashflow(-c.Amount)
 		case EffectGrantProducer:
 			m.grantProducer(c.Key, c.Count)
 		case EffectGrowCrowd:

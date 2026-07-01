@@ -120,6 +120,7 @@ func (ss *specScreen) view(m *Model) string {
 		vk.Spread(theme.EggSty.Render("🪙 "+economy.FormatNum(s.Tokens))+theme.DimSty.Render(" tokens"),
 			theme.ValSty.Render(economy.FormatNum(s.EggPrice())+" tokens/egg")+theme.DimSty.Render("  "+content.Text.Spec.PriceLabel)),
 		vk.Row(content.Text.Spec.ExposureLabel, theme.ValSty.Render(economy.FormatNum(s.LeveragedExposure())+" 🪙")),
+		vk.Row(content.Text.Spec.TrendLabel, tradeTrendLabel(s)),
 	)
 
 	sections := []string{
@@ -163,11 +164,21 @@ func (ss *specScreen) renderTicket(m *Model) string {
 		premSty = theme.CantSty
 	}
 
+	notional := prem * lev
 	var warn string
 	if lev > 1 {
-		warn = theme.CantSty.Render(fmt.Sprintf(content.Text.Spec.WipeWarnFmt, economy.FormatNum(100/lev)+"%"))
+		warn = theme.CantSty.Render(fmt.Sprintf(content.Text.Spec.WipeWarnFmt, economy.FormatNum(100*((1-economy.SpecMaintenanceMargin)/lev))+"%"))
 	} else {
 		warn = theme.DimSty.Render("1x — rides to expiry, no early margin call")
+	}
+
+	liq := theme.DimSty.Render("n/a")
+	buffer := theme.DimSty.Render("n/a")
+	if lev > 1 {
+		price := m.econ.Get().EggPrice()
+		pos := economy.Position{Kind: kind, Strike: price, Premium: prem, Leverage: lev}
+		liq = theme.ValSty.Render(economy.FormatNum(pos.LiquidationPrice()) + " tokens/egg")
+		buffer = theme.ValSty.Render(economy.FormatNum(pos.MarginCallMove()*100) + "%")
 	}
 
 	return vk.Panel(content.Text.Spec.TicketPanel,
@@ -175,6 +186,9 @@ func (ss *specScreen) renderTicket(m *Model) string {
 		theme.DimSty.Italic(true).Render("   "+thesis),
 		vk.Row(content.Text.Spec.PremiumLabel, premSty.Render(economy.FormatNum(prem)+" 🪙")),
 		vk.Row(content.Text.Spec.LeverageLabel, theme.EggSty.Render(fmt.Sprintf("%.0fx", lev))),
+		vk.Row(content.Text.Spec.NotionalLabel, theme.ValSty.Render(economy.FormatNum(notional)+" 🪙")),
+		vk.Row(content.Text.Spec.LiqPriceLabel, liq),
+		vk.Row(content.Text.Spec.BufferLabel, buffer),
 		vk.Row(content.Text.Spec.ExpiryLabel, theme.ValSty.Render(fmt.Sprintf(content.Text.Spec.ExpiryFmt, economy.SpecExpirySeconds))),
 		vk.Row(content.Text.Spec.RiskLabel, warn),
 	)
@@ -205,6 +219,13 @@ func (ss *specScreen) renderPositions(m *Model) string {
 		}
 		bar := panels.Meter(frac, 10)
 		clock := theme.DimSty.Render(fmt.Sprintf(content.Text.Spec.ExpiresInFmt, economy.FormatNum(p.Expiry)))
+		if p.Leverage > 1 {
+			clock = theme.DimSty.Render(fmt.Sprintf("%s %s · %s",
+				content.Text.Spec.LiqPriceLabel,
+				economy.FormatNum(p.LiquidationPrice()),
+				fmt.Sprintf(content.Text.Spec.ExpiresInFmt, economy.FormatNum(p.Expiry)),
+			))
+		}
 
 		left := marker + theme.ValSty.Render(desc) + "  " + mark
 		lines = append(lines, vk.Spread(left, bar+" "+clock))
@@ -257,9 +278,13 @@ func positionSettleMsg(res economy.PosResult) string {
 }
 
 func marginCallNotif(res economy.PosResult) notify.Notification {
+	msg := fmt.Sprintf("%s tripped maintenance and got liquidated. %s 🪙 came back; the rest went to the desk.", res.Pos.Desc(), economy.FormatNum(res.Payout))
+	if res.Payout <= 0 {
+		msg = fmt.Sprintf("%s tripped maintenance and got liquidated. The desk kept the whole premium.", res.Pos.Desc())
+	}
 	return notify.Notification{
 		Title:   content.Text.Spec.MarginCallTitle,
-		Message: fmt.Sprintf("%s went underwater and got liquidated at the mark. %s of premium — gone.", res.Pos.Desc(), economy.FormatNum(res.Pos.Premium)),
+		Message: msg,
 		Tone:    notify.ToneNegative,
 	}
 }
