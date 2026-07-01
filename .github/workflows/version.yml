@@ -24,6 +24,15 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Verify running against main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Version bumps must run on main; refusing to tag $GITHUB_SHA." >&2
+            exit 1
+          fi
+
       - name: Compute next version
         id: version
         run: echo "version=$(make -s next-version BUMP=${{ inputs.bump }})" >> "$GITHUB_OUTPUT"

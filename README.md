@@ -1,5 +1,7 @@
 # 🪿 goose
 
+[![CI](https://github.com/codyconfer/goose/actions/workflows/ci.yml/badge.svg)](https://github.com/codyconfer/goose/actions/workflows/ci.yml) | [![Release](https://github.com/codyconfer/goose/actions/workflows/release.yml/badge.svg?event=release)](https://github.com/codyconfer/goose/actions/workflows/release.yml)
+
 A tiny terminal **idle-clicker economy** where **tokens** are the currency and
 **golden goose eggs** are the goods you sell.
 
