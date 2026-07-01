@@ -1,6 +1,6 @@
 # 🪿 goose
 
-[![GitHub release](https://img.shields.io/github/v/release/codyconfer/goose?logo=github&label=release)](https://github.com/codyconfer/goose/releases/latest)
+[![GitHub release](https://img.shields.io/github/v/release/codyconfer/goose?logo=github&label=latest)](https://github.com/codyconfer/goose/releases/latest)
  [![CI](https://github.com/codyconfer/goose/actions/workflows/ci.yml/badge.svg)](https://github.com/codyconfer/goose/actions/workflows/ci.yml) [![Release](https://github.com/codyconfer/goose/actions/workflows/release.yml/badge.svg)](https://github.com/codyconfer/goose/actions/workflows/release.yml)
 
 A tiny terminal **idle-clicker economy** where **tokens** are the currency and
