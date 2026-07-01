@@ -19,7 +19,7 @@ func TestQueueShowsHeadUntilExpiry(t *testing.T) {
 	q := NewQueue(0)
 	q.Push(n("a"), 2)
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		cur, ok := q.Current()
 		if !ok || cur.Title != "a" {
 			t.Fatalf("beat %d: want head a, got %q ok=%v", i, cur.Title, ok)

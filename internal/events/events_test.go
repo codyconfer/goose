@@ -47,7 +47,7 @@ func TestRollEventNeverFires(t *testing.T) {
 	s := economy.NewState()
 	es := NewMachine()
 	r := rand.New(rand.NewSource(1))
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		if _, ok := es.Roll(s, r); ok {
 			t.Fatal("zero-chance event fired")
 		}
@@ -95,7 +95,7 @@ func TestRollEventOneShotFiresOnce(t *testing.T) {
 	if _, ok := es.Roll(s, r); !ok {
 		t.Fatal("one-shot event did not fire the first time")
 	}
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		if _, ok := es.Roll(s, r); ok {
 			t.Fatal("one-shot event fired again after being marked")
 		}
@@ -159,7 +159,7 @@ func TestEggPriceTrigger(t *testing.T) {
 	}
 
 	never := EggPriceTrigger{High: economy.BasePrice * 1.5, Chance: 0}
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		if never.Fires(s, r) {
 			t.Fatal("zero-chance egg-price trigger fired")
 		}
@@ -191,7 +191,7 @@ func TestChanceTriggerScaledByPaceAndBaseScale(t *testing.T) {
 			trig := ChanceTrigger{P: chanceP(rawP)}
 			r := rand.New(rand.NewSource(42))
 			fires := 0
-			for i := 0; i < trials; i++ {
+			for range trials {
 				if trig.Fires(s, r) {
 					fires++
 				}

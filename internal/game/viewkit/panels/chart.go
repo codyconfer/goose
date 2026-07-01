@@ -35,13 +35,7 @@ func chartSpan(lo, hi float64) float64 {
 
 func chartLevel(v, lo, span float64, cells int) int {
 	l := int((v-lo)/span*float64(cells-1) + 0.5)
-	if l < 0 {
-		l = 0
-	}
-	if l > cells-1 {
-		l = cells - 1
-	}
-	return l
+	return min(max(l, 0), cells-1)
 }
 
 func chartLabel(i, last int, lo, hi float64, fmtVal func(float64) string) string {

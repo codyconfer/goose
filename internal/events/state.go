@@ -1,5 +1,7 @@
 package events
 
+import "maps"
+
 type State struct {
 	Fired map[string]bool `json:"fired,omitempty"`
 }
@@ -8,9 +10,7 @@ func NewState() State { return State{Fired: map[string]bool{}} }
 
 func (s State) clone() State {
 	out := State{Fired: make(map[string]bool, len(s.Fired))}
-	for k, v := range s.Fired {
-		out.Fired[k] = v
-	}
+	maps.Copy(out.Fired, s.Fired)
 	return out
 }
 

@@ -43,7 +43,7 @@ func send(m Model, k tea.KeyMsg) Model {
 
 func maxLineWidth(s string) int {
 	max := 0
-	for _, line := range strings.Split(s, "\n") {
+	for line := range strings.SplitSeq(s, "\n") {
 		if w := ansi.StringWidth(line); w > max {
 			max = w
 		}
@@ -189,7 +189,7 @@ func TestMenuExitQuits(t *testing.T) {
 	isolateHome(t)
 	m := NewMenu()
 	items := len(m.screen.(*menuScreen).items)
-	for i := 0; i < items; i++ {
+	for range items {
 		m = send(m, key("down"))
 	}
 	m = send(m, key("enter"))
@@ -383,7 +383,7 @@ func TestBeatRollsAndSpawnsVC(t *testing.T) {
 
 	m.beatMid()
 
-	for i := 0; i < 5000; i++ {
+	for range 5000 {
 		if _, ok := m.screen.(*characterScreen); ok {
 			break
 		}

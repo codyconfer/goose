@@ -37,7 +37,7 @@ func TestScrollStateScrollStopsAtEnds(t *testing.T) {
 		t.Fatalf("scroll up from top = %d, want 0", s.Offset)
 	}
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		s.Scroll(8, 20, 8)
 	}
 	if s.Offset != 12 {

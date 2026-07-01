@@ -97,7 +97,7 @@ func TestCandleRowsLeftPadsShortSeries(t *testing.T) {
 	rows := candleRows([]OHLC{{2, 3, 2, 3}, {3, 4, 3, 4}}, 6, 3, 2, 4)
 	for r, row := range rows {
 		runes := []rune(stripANSI(row))
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			if runes[i] != ' ' {
 				t.Fatalf("row %d col %d: expected padding, got %q", r, i, runes[i])
 			}

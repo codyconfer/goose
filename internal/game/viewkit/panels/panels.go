@@ -44,10 +44,7 @@ func Spread(left, right string, width int) string {
 		}
 		leftW = ansi.StringWidth(left)
 	}
-	gap := width - leftW - rightW
-	if gap < 1 {
-		gap = 1
-	}
+	gap := max(width-leftW-rightW, 1)
 	return left + strings.Repeat(" ", gap) + right
 }
 
@@ -79,14 +76,15 @@ func Header(title string, detail ...string) string {
 }
 
 func (f Frame) Header(title string, detail ...string) string {
-	head := theme.TitleSty.Render(title)
+	var head strings.Builder
+	head.WriteString(theme.TitleSty.Render(title))
 	for _, part := range detail {
 		if strings.TrimSpace(part) == "" {
 			continue
 		}
-		head += theme.DimSty.Render("   ·   " + part)
+		head.WriteString(theme.DimSty.Render("   ·   " + part))
 	}
-	return ansi.Truncate(head, f.bodyWidth()+4, "…") + "\n" + f.Rule()
+	return ansi.Truncate(head.String(), f.bodyWidth()+4, "…") + "\n" + f.Rule()
 }
 
 func Stack(sections ...string) string {

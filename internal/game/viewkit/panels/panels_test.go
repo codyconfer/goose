@@ -56,7 +56,7 @@ func TestFrameHintLineWrapsToWidth(t *testing.T) {
 	if !strings.Contains(out, "\n") {
 		t.Fatalf("hint line did not wrap:\n%s", stripANSI(out))
 	}
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		if got := ansi.StringWidth(line); got > 24 {
 			t.Fatalf("hint line width=%d, want <= 24: %q", got, stripANSI(line))
 		}

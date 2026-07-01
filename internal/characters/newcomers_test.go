@@ -27,7 +27,7 @@ func TestNewcomerOptionsResolveAllBranches(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			for seed := int64(0); seed < 120; seed++ {
+			for seed := range int64(120) {
 				m := economy.FromState(economy.State{
 					Tokens:      50000,
 					TotalEarned: 50000,

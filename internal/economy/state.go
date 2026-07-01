@@ -1,5 +1,7 @@
 package economy
 
+import "maps"
+
 type State struct {
 	Tokens           float64        `json:"tokens"`
 	TotalEarned      float64        `json:"total_earned"`
@@ -18,7 +20,7 @@ type State struct {
 	Ledger           []Transaction  `json:"ledger,omitempty"`
 	PriceCandles     []PriceCandle  `json:"price_candles,omitempty"`
 	PriceCandleBeats int            `json:"price_candle_beats,omitempty"`
-	Settings         Settings       `json:"settings,omitempty"`
+	Settings         Settings       `json:"settings,omitzero"`
 	LastSeen         int64          `json:"last_seen"`
 
 	FreezeSeconds float64 `json:"freeze_seconds,omitempty"`
@@ -38,13 +40,9 @@ func NewState() State {
 func (s State) clone() State {
 	out := s
 	out.Owned = make(map[string]int, len(s.Owned))
-	for k, v := range s.Owned {
-		out.Owned[k] = v
-	}
+	maps.Copy(out.Owned, s.Owned)
 	out.UpgradeLevels = make(map[string]int, len(s.UpgradeLevels))
-	for k, v := range s.UpgradeLevels {
-		out.UpgradeLevels[k] = v
-	}
+	maps.Copy(out.UpgradeLevels, s.UpgradeLevels)
 	if s.Transactions != nil {
 		out.Transactions = append([]Transaction(nil), s.Transactions...)
 	}

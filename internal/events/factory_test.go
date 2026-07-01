@@ -25,7 +25,7 @@ func richState() economy.State {
 func TestEventApplyProducesValidOutcomes(t *testing.T) {
 	for i := range Events {
 		e := Events[i]
-		for seed := int64(0); seed < 80; seed++ {
+		for seed := range int64(80) {
 			m := economy.FromState(richState())
 			r := rand.New(rand.NewSource(seed))
 			out := e.Apply(m.Get(), r)
@@ -46,7 +46,7 @@ func TestPickHonorsWeights(t *testing.T) {
 		counts := map[string]int{}
 		r := rand.New(rand.NewSource(7))
 		s := economy.NewState()
-		for i := 0; i < 6000; i++ {
+		for range 6000 {
 			counts[a(s, r).Notif.Title]++
 		}
 		return counts

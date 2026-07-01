@@ -16,7 +16,7 @@ func TestPickHonorsWeights(t *testing.T) {
 	counts := map[string]int{}
 	r := rand.New(rand.NewSource(7))
 	s := economy.NewState()
-	for i := 0; i < 6000; i++ {
+	for range 6000 {
 		counts[resolve(s, r).Notif.Title]++
 	}
 	if counts["light"] == 0 {
@@ -35,7 +35,7 @@ func TestChanceSplitsTwoWays(t *testing.T) {
 	seen := map[string]bool{}
 	r := rand.New(rand.NewSource(1))
 	s := economy.NewState()
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		seen[resolve(s, r).Notif.Title] = true
 	}
 	if !seen["win"] || !seen["lose"] {

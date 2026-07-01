@@ -54,7 +54,7 @@ func TestPriceMeanRevertsTowardFundamental(t *testing.T) {
 	m.s.Owned["server"] = 1
 	m.s.Consumers = 500
 	r := rand.New(rand.NewSource(1))
-	for i := 0; i < 400; i++ {
+	for range 400 {
 		m.UpdatePrice(0.3, r)
 	}
 	if m.s.PriceFactor <= 1.0 {
@@ -69,7 +69,7 @@ func TestPriceIsVolatile(t *testing.T) {
 	m.s.Consumers = m.s.EggsPerSecond() / consumerAppetite * crowdHeadroom
 	r := rand.New(rand.NewSource(1))
 	min, max := m.s.PriceFactor, m.s.PriceFactor
-	for i := 0; i < 300; i++ {
+	for range 300 {
 		m.UpdatePrice(0.3, r)
 		if m.s.PriceFactor < min {
 			min = m.s.PriceFactor
@@ -96,7 +96,7 @@ func TestPriceTrendCarriesMovesAcrossRerolls(t *testing.T) {
 	m.s.PriceTrend = 0.04
 
 	start := m.s.PriceFactor
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		m.UpdatePrice(3, nil)
 	}
 	if m.s.PriceFactor <= start {
@@ -112,7 +112,7 @@ func TestPriceStaysWithinBounds(t *testing.T) {
 	m.s.Owned["server"] = 1
 	m.s.Consumers = 1e9
 	r := rand.New(rand.NewSource(2))
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		m.UpdatePrice(0.3, r)
 		if m.s.PriceFactor > priceCeil+1e-9 || m.s.PriceFactor < priceFloor-1e-9 {
 			t.Fatalf("price factor %v escaped [%v, %v]", m.s.PriceFactor, priceFloor, priceCeil)

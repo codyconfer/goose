@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"slices"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -182,10 +183,7 @@ func renderPriceChart(m *Model) string {
 	if len(cs) == 0 {
 		return vk.Panel(content.Text.Trade.PriceChartPanel, theme.DimSty.Render(content.Text.Trade.PriceChartGathering))
 	}
-	width := vk.Width - 7
-	if width < 1 {
-		width = 1
-	}
+	width := max(vk.Width-7, 1)
 	if len(cs) > width {
 		cs = cs[len(cs)-width:]
 	}
@@ -278,8 +276,8 @@ func renderLedger(m *Model, sv panels.ScrollState) string {
 	vk := m.frame()
 	led := m.econ.Get().Ledger
 	rows := make([]panels.LedgerRow, 0, len(led))
-	for i := len(led) - 1; i >= 0; i-- {
-		rows = append(rows, panels.LedgerRow{Label: ledgerDesc(led[i]), Delta: led[i].Tokens})
+	for _, tx := range slices.Backward(led) {
+		rows = append(rows, panels.LedgerRow{Label: ledgerDesc(tx), Delta: tx.Tokens})
 	}
 	return vk.Ledger(content.Text.Trade.LedgerPanel, rows, "🪙", economy.FormatNum, ledgerRows, sv.Offset, content.Text.Trade.LedgerEmpty)
 }

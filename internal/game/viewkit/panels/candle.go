@@ -55,12 +55,9 @@ func candleRows(candles []OHLC, width, height int, lo, hi float64) []string {
 		return chartLevel(p, lo, span, levels)
 	}
 
-	pad := width - len(candles)
-	if pad < 0 {
-		pad = 0
-	}
+	pad := max(width-len(candles), 0)
 	rows := make([]string, height)
-	for row := 0; row < height; row++ {
+	for row := range height {
 		cell := height - 1 - row
 		upper, lower := 2*cell+1, 2*cell
 		var b strings.Builder

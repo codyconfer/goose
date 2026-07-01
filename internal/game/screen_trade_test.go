@@ -165,7 +165,7 @@ func TestPriceChartInView(t *testing.T) {
 	s := economy.NewState()
 	s.Owned["server"] = 3
 	m := New(economy.FromState(s), events.NewMachine(), 0)
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		m.priceAccum = 3.0
 		m.beatSlow()
 	}

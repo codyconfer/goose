@@ -61,8 +61,8 @@ func TestTakeTheMoneyCreditsInvestment(t *testing.T) {
 }
 
 func TestVCOptionsResolveAllBranches(t *testing.T) {
-	for seed := int64(0); seed < 120; seed++ {
-		for opt := 0; opt < 3; opt++ {
+	for seed := range int64(120) {
+		for opt := range 3 {
 			m := economy.FromState(economy.State{
 				Tokens:      5000,
 				TotalEarned: 5000,
@@ -92,7 +92,7 @@ func TestRoll(t *testing.T) {
 
 	m := economy.FromState(economy.State{TotalEarned: 5000})
 	got := false
-	for i := 0; i < 5000; i++ {
+	for range 5000 {
 		if ch, ok := Roll(m.Get(), r); ok {
 			switch ch.Type {
 			case VC, Wook, Booster, Politician, Engineer, MiddleClass, Analyst, ShortSeller:

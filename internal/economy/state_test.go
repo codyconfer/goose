@@ -164,11 +164,11 @@ func TestNormalizeSeedsMarketCapForOldSaves(t *testing.T) {
 func TestConsumersDriftTowardSupply(t *testing.T) {
 	m := NewMachine()
 	m.s.Tokens = 1e9
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		m.BuyProducer(Producers[1])
 	}
 
-	for i := 0; i < 600; i++ {
+	for range 600 {
 		m.UpdateConsumers(0.1)
 	}
 	if m.s.Consumers <= 0 {
