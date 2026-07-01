@@ -1,0 +1,144 @@
+{
+  "lucky_egg": {
+    "title": "🍀 Lucky Egg",
+    "message_fmt": "You find a rare golden egg and flip it to a collector who 'really gets the vision' for %s bonus tokens."
+  },
+  "golden_hour": {
+    "title": "🌟 Golden Hour",
+    "message_fmt": "The whole flock catches the same standup energy at once — +%s tokens before the vibe wears off."
+  },
+  "market_boom": {
+    "title": "📈 Market Boom",
+    "message_fmt": "Demand surges on no news whatsoever — buyers hurl %s tokens at you purely to avoid missing out."
+  },
+  "wandering_goose": {
+    "title": "🪂 Soft Landing",
+    "message": "A goose washes up from a startup that just burned its last round and joins your flock for free — résumé still warm, eyes slightly haunted."
+  },
+  "market_day": {
+    "title": "🛒 Market Day",
+    "message_fmt": "A rival data center liquidates its inventory — eggs flood the stalls dirt-cheap and you snap up %s of them for %s tokens!"
+  },
+  "fox_raid": {
+    "title": "🧠 Brain Drain",
+    "message_fmt": "A rival lab waves nine-figure signing bonuses at your sharpest geese. You counter with 'retention' and %s tokens fly out the door just to keep the flock from walking."
+  },
+  "margin_call": {
+    "title": "🏦 Margin Call",
+    "message_fmt": "A twitchy prop desk marks your book to market and pulls the plug. Leverage giveth; the margin clerk taketh %s%% of it back."
+  },
+  "flash_crash": {
+    "title": "📉 Flash Crash",
+    "message": "A single skeptical thread goes viral and the whole egg complex gaps down before anyone can find the sell button. Calls get vaporized; the puts look prophetic."
+  },
+  "melt_up": {
+    "title": "🚀 Melt-Up",
+    "message": "An analyst 'updates his model' and eggs rip vertical on zero new information. Momentum funds pile in; the shorts are quietly getting a phone call."
+  },
+  "press_darling": {
+    "title": "📰 Local Darlings",
+    "message_fmt": "A breathless blog post calls your flock 'the goose that will eat search' — fresh buyers crowd in and you pocket %s tokens."
+  },
+  "ipo_rumor": {
+    "title": "🏦 IPO Rumors",
+    "message_fmt": "Bankers catch wind of your egg empire and start whispering 'S-1' at each other — speculative buying nets you %s tokens."
+  },
+  "selling_frenzy": {
+    "title": "🤑 Selling Frenzy",
+    "message_fmt": "Eggs are trading at a premium nobody can justify — you unload %s of them for %s tokens before the music stops."
+  },
+  "circular_investment": {
+    "gain": {
+      "title": "🔄 Circular Investment",
+      "message_fmt": "Two data-center barons announce they're investing in each other and, somehow, in you. The market cap balloons and %s tokens spill over. Nobody reads the footnotes."
+    },
+    "loss": {
+      "title": "🔗 The Circle Broke",
+      "message_fmt": "One baron misses a payment and the whole daisy-chain unwinds at once. The 'revenue' was everyone's money going in a circle; %s tokens of it keeps going, right out the door."
+    }
+  },
+  "roi_reckoning": {
+    "title": "🧮 ROI Reckoning",
+    "message_fmt": "A CFO somewhere finally asks, 'wait — what's the return on all these eggs?' Budgets freeze, %s tokens get clawed back, and the momentum crowd sobers up fast."
+  },
+  "token_burn": {
+    "title": "🔥 Token Burn",
+    "message_fmt": "An intern left the goose running overnight on \"max reasoning.\" You wake up to a %s-token bill and a slide deck that should have been an email."
+  },
+  "gpu_shortage": {
+    "title": "🪫 GPU Shortage",
+    "message_fmt": "Every card on Earth is allocated to someone with a bigger check. You pay %s tokens in scalper markup just to keep the geese warm."
+  },
+  "vaporware_keynote": {
+    "gain": {
+      "title": "🎤 Vaporware Keynote",
+      "message_fmt": "You demo an egg that doesn't exist yet to rapturous applause. Pre-orders and hype net %s tokens before anyone asks for a ship date."
+    },
+    "fail": {
+      "title": "🎬 The Demo Failed On Stage",
+      "message": "The pre-rendered egg freezes, then crashes, then displays a stack trace to a live audience. The clip loops all night with a laugh track. The believers wince; the tourists leave."
+    }
+  },
+  "chip_delay": {
+    "title": "🍽️ Dinner-Plate Chip Slips to 2027",
+    "message": "Your custom silicon — a motherboard the size of a dinner plate — quietly slips another year. The believers hold; the tourists drift off."
+  },
+  "stargate_groundbreaking": {
+    "title": "🌌 Stargate Groundbreaking",
+    "message_fmt": "You break ground on a half-trillion-token megacluster next to a head of state and a gold shovel. The market swoons and %s tokens rain down. Financing? Later."
+  },
+  "sovereign_mandate": {
+    "title": "🗽 Sovereign AI Mandate",
+    "message_fmt": "A nation-state declares your flock critical infrastructure and signs a blank check worth %s tokens. The eggs are now classified."
+  },
+  "ludicrous_valuation": {
+    "title": "🏭 Quadrillion-Token Valuation",
+    "message_fmt": "You unveil the Golden Egg Factory inside the goose. Analysts stop analyzing and simply believe. %s tokens materialize. Own the goose, not the eggs."
+  },
+  "open_weights_dump": {
+    "title": "📂 Rival Open-Sources Their Eggs",
+    "message": "A lab you'd never heard of dumps a comparable egg on the internet for free \"to accelerate humanity.\" Your moat evaporates overnight and the whole complex re-prices lower."
+  },
+  "efficiency_memo": {
+    "gain": {
+      "title": "✂️ Unlocking Efficiencies",
+      "message_fmt": "You 'right-size the flock to focus on the mission' and the market rewards the discipline: +%s tokens on the news. The remaining geese work weekends now."
+    },
+    "backlash": {
+      "title": "😠 The Layoff Backlash",
+      "message": "The \"efficiency\" memo leaks with the CEO's yacht in the background. The cut geese talk to reporters, morale craters, and the crowd sours on the whole vibe."
+    }
+  },
+  "superintelligence_blog": {
+    "gain": {
+      "title": "🧠 'The Gentle Singularity'",
+      "message_fmt": "You publish a 3,000-word blog promising the eggs will soon cure disease, fix the climate, and possibly love you back. Belief spikes and %s tokens of true believers arrive."
+    },
+    "miss": {
+      "title": "🥱 Nobody Read the Blog",
+      "message": "You publish the manifesto about superintelligence. It gets twelve likes and a reply asking when the eggs will actually ship. The moment passes."
+    }
+  },
+  "data_breach": {
+    "title": "🔓 Egg Data Breach",
+    "message_fmt": "Every customer's egg-buying history leaks, tastefully, onto a hacking forum. %s tokens in 'incident response' and free credit monitoring, and a chunk of the crowd never comes back."
+  },
+  "grid_strain": {
+    "surcharge": {
+      "title": "⚡ Grid Strain Surcharge",
+      "message_fmt": "Your data centers now draw more power than a mid-size town, and the utility has noticed. A %s-token peak-demand surcharge lands, plus a stern letter about 'the community.'"
+    },
+    "brownout": {
+      "title": "🔌 Rolling Brownout",
+      "message": "The regional grid buckles under your compute and the utility throttles you off-peak. The geese sit in the dark for a bit while the town keeps its lights on."
+    }
+  },
+  "bagholder_capitulation": {
+    "title": "🫠 Bagholder Capitulation",
+    "message": "Prices have been ugly long enough that the last diamond-handed believers finally give up and post their loss porn. The capitulation clears the froth but thins the crowd."
+  },
+  "hype_cycle_peak": {
+    "title": "🎢 Peak of Inflated Expectations",
+    "message_fmt": "Every magazine cover is a goose. Your barber has egg exposure. It's obviously the top and everyone's buying anyway — you ride the mania for %s tokens."
+  }
+}
