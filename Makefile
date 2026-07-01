@@ -14,30 +14,26 @@ GOLANGCI := $(GOBIN)/golangci-lint
 GOLANGCI_VERSION := v2.12.2
 LDFLAGS := -s -w -X '$(MODULE)/internal/buildinfo.Version=$(VERSION)' -X '$(MODULE)/internal/buildinfo.Commit=$(COMMIT)' -X '$(MODULE)/internal/buildinfo.Date=$(BUILD_DATE)' -X '$(MODULE)/internal/buildinfo.Dirty=$(DIRTY)'
 
-.PHONY: fmt lint test check hooks tools build clean version release release-linux release-darwin release-windows checksums appimage-linux-amd64 appimage-linux-arm64 darwin-arm64 windows-amd64 windows-arm64 require-appimagetool require-zip
+BUMP ?= patch
 
-# Install dev tooling (golangci-lint) into $(GOBIN).
+.PHONY: fmt lint test check hooks tools build clean version next-version release release-linux release-darwin release-windows checksums appimage-linux-amd64 appimage-linux-arm64 darwin-arm64 windows-amd64 windows-arm64 require-appimagetool require-zip
+
 tools:
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION)
 
-# Format all Go code.
 fmt:
 	gofmt -w .
 	@[ -x "$(GOLANGCI)" ] && "$(GOLANGCI)" fmt || true
 
-# Run static analysis.
 lint:
 	go vet ./...
 	"$(GOLANGCI)" run
 
-# Run the test suite.
 test:
 	go test ./...
 
-# Everything the pre-commit hook runs.
 check: fmt lint test
 
-# Install tooling and point git at the tracked hooks directory.
 hooks: tools
 	git config core.hooksPath .githooks
 	chmod +x .githooks/*
@@ -45,6 +41,9 @@ hooks: tools
 
 version:
 	@echo "$(VERSION)"
+
+next-version:
+	@BUMP=$(BUMP) BASE_VERSION=$(BASE_VERSION) ./scripts/next-version.sh
 
 build:
 	mkdir -p "$(DIST_DIR)"
