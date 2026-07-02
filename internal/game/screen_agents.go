@@ -54,8 +54,6 @@ func (as *agentsScreen) current(m *Model) (economy.Agent, bool) {
 	return agents[as.cursor], true
 }
 
-// sizeOptions is the ladder the agent's size cycles through: egg quantities for
-// spot trades, premium tiers for options.
 func sizeOptions(a economy.Agent) []float64 {
 	if a.TradesOptions() {
 		return specPremiums
@@ -153,6 +151,7 @@ func (as *agentsScreen) renderRoster(m *Model, agents []economy.Agent) string {
 		return vk.Panel(content.Text.Agents.Panel, theme.DimSty.Render(content.Text.Agents.Empty))
 	}
 	var lines []string
+	selStart, selEnd := -1, -1
 	for i, a := range agents {
 		selected := i == as.cursor
 		rc := content.Text.Agents.Roster[a.Key]
@@ -168,14 +167,19 @@ func (as *agentsScreen) renderRoster(m *Model, agents []economy.Agent) string {
 			status = theme.CanSty.Render(content.Text.Agents.OnWord)
 		}
 
+		if selected {
+			selStart = len(lines)
+		}
 		lines = append(lines, vk.Spread(name, status))
 		lines = append(lines, theme.DimSty.Width(vk.Width-5).MarginLeft(5).Render(agentRule(a)))
 		if selected {
 			lines = append(lines, theme.DimSty.Italic(true).Width(vk.Width-5).MarginLeft(5).Render(rc.Blurb))
+			selEnd = len(lines) - 1
 		}
 	}
-	if as.cursor >= 0 {
-		as.scroll.Reveal(as.cursor, len(lines), agentRows)
+	if selStart >= 0 {
+		as.scroll.Reveal(selEnd, len(lines), agentRows)
+		as.scroll.Reveal(selStart, len(lines), agentRows)
 	}
 	return vk.ScrollPanel(content.Text.Agents.Panel, lines, agentRows, as.scroll.Offset)
 }
