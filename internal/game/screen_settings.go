@@ -1,7 +1,11 @@
 package game
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
+	"time"
+	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -19,6 +23,7 @@ type settingRow struct {
 type settingsScreen struct {
 	rows   []settingRow
 	cursor int
+	seed   string
 }
 
 func newSettingsScreen() *settingsScreen {
@@ -29,6 +34,7 @@ func newSettingsScreen() *settingsScreen {
 			{spec: content.Settings.EventPace, idx: def.EventIdx()},
 			{spec: content.Settings.MarketPace, idx: def.MarketIdx()},
 		},
+		seed: fmt.Sprintf("%d", time.Now().UnixNano()),
 	}
 }
 
@@ -48,8 +54,20 @@ func (ss *settingsScreen) settings() economy.Settings {
 	return set
 }
 
+func (ss *settingsScreen) seedValue() int64 {
+	if strings.TrimSpace(ss.seed) == "" {
+		return time.Now().UnixNano()
+	}
+	seed, err := strconv.ParseInt(ss.seed, 10, 64)
+	if err != nil {
+		return time.Now().UnixNano()
+	}
+	return seed
+}
+
 func (ss *settingsScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
-	ss.cursor = panels.ClampIndex(ss.cursor, len(ss.rows))
+	total := len(ss.rows) + 1
+	ss.cursor = panels.ClampIndex(ss.cursor, total)
 	switch msg.String() {
 	case "ctrl+c":
 		m.quitting = true
@@ -57,28 +75,47 @@ func (ss *settingsScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 	case "esc", "q":
 		m.screen = &menuScreen{items: menuItems(m.saves)}
 	case "up", "k":
-		ss.cursor = panels.MoveIndex(ss.cursor, -1, len(ss.rows))
+		ss.cursor = panels.MoveIndex(ss.cursor, -1, total)
 	case "down", "j":
-		ss.cursor = panels.MoveIndex(ss.cursor, 1, len(ss.rows))
+		ss.cursor = panels.MoveIndex(ss.cursor, 1, total)
 	case "left", "h":
-		if len(ss.rows) > 0 {
+		if ss.cursor < len(ss.rows) {
 			r := &ss.rows[ss.cursor]
 			r.idx = panels.StepIndex(r.idx, -1, len(r.spec.Options))
 		}
 	case "right", "l":
-		if len(ss.rows) > 0 {
+		if ss.cursor < len(ss.rows) {
 			r := &ss.rows[ss.cursor]
 			r.idx = panels.StepIndex(r.idx, 1, len(r.spec.Options))
 		}
+	case "r":
+		if ss.cursor == len(ss.rows) {
+			ss.seed = fmt.Sprintf("%d", time.Now().UnixNano())
+		}
+	case "backspace", "ctrl+h":
+		if ss.cursor == len(ss.rows) {
+			rs := []rune(ss.seed)
+			if len(rs) > 0 {
+				ss.seed = string(rs[:len(rs)-1])
+			}
+		}
 	case "enter", " ", "spacebar":
-		m.foundFlock(ss.settings())
+		m.foundFlock(ss.settings(), ss.seedValue())
+	default:
+		if ss.cursor == len(ss.rows) {
+			for _, r := range msg.Runes {
+				if unicode.IsDigit(r) || (r == '-' && ss.seed == "") {
+					ss.seed += string(r)
+				}
+			}
+		}
 	}
 	return nil
 }
 
 func (ss *settingsScreen) view(m *Model) string {
 	vk := m.frame()
-	cursor := panels.ClampIndex(ss.cursor, len(ss.rows))
+	cursor := panels.ClampIndex(ss.cursor, len(ss.rows)+1)
 	var b strings.Builder
 	b.WriteString(vk.Header("NEW FLOCK", "tune the simulation before you hatch"))
 	b.WriteString("\n\n")
@@ -114,12 +151,25 @@ func (ss *settingsScreen) view(m *Model) string {
 		b.WriteString("\n")
 	}
 
+	seedSelected := cursor == len(ss.rows)
+	seedValue := theme.ValSty.Render(ss.seed)
+	if seedSelected {
+		seedValue = theme.EggSty.Render(ss.seed)
+	}
+	b.WriteString(vk.Spread(vk.Selectable("World Seed", seedSelected), seedValue))
+	b.WriteString("\n")
+	if seedSelected {
+		b.WriteString(theme.DimSty.Width(vk.Width-5).MarginLeft(5).Render("Type a deterministic seed or press r to reroll the generated world.") + "\n")
+	}
+	b.WriteString("\n")
+
 	if m.flash != "" {
 		b.WriteString(panels.Flash(vk.Fit(m.flash)) + "\n\n")
 	}
 	b.WriteString(vk.HintLine(
 		[2]string{"↑/↓", "setting"},
 		[2]string{"←/→", "change"},
+		[2]string{"r", "reroll seed"},
 		[2]string{"enter", "hatch flock"},
 		[2]string{"esc", "back"},
 	))

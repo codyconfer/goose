@@ -88,7 +88,8 @@ func (m *Machine) fillTrade(kind TxKind, want, price float64) (eggs, tokens floa
 }
 
 func (m *Machine) trade(kind TxKind, want, price float64) {
-	m.fillTrade(kind, want, price)
+	_, tokens := m.fillTrade(kind, want, price)
+	m.trendFromTrade(kind, tokens)
 }
 
 func (s State) orderPrice(kind TxKind) float64 {
@@ -139,5 +140,11 @@ func (m *Machine) ProcessTransactions(dt float64) TxReport {
 		kept = append(kept, o)
 	}
 	m.s.Transactions = kept
+	if rep.TokensSpent > 0 {
+		m.trendFromTrade(TxBuyEggs, rep.TokensSpent)
+	}
+	if rep.TokensEarned > 0 {
+		m.trendFromTrade(TxSellEggs, rep.TokensEarned)
+	}
 	return rep
 }

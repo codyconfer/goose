@@ -8,6 +8,7 @@ import (
 
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
+	"github.com/codyconfer/goose/internal/world"
 )
 
 func TestSQLiteStoreRoundTrip(t *testing.T) {
@@ -31,7 +32,8 @@ func TestSQLiteStoreRoundTrip(t *testing.T) {
 	state.PriceCandleBeats = 2
 	m := economy.FromState(state)
 	evm := events.FromState(events.State{Fired: map[string]bool{"first-egg": true}})
-	info, err := store.Create("Flock 1", m, evm)
+	wrld := world.Generate(99)
+	info, err := store.Create("Flock 1", m, evm, wrld)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -42,7 +44,7 @@ func TestSQLiteStoreRoundTrip(t *testing.T) {
 		t.Fatal("store reports missing after write")
 	}
 
-	got, gotEv, err := store.Read(info.ID)
+	got, gotEv, gotWorld, err := store.Read(info.ID)
 	if err != nil {
 		t.Fatalf("read back: %v", err)
 	}
@@ -65,17 +67,23 @@ func TestSQLiteStoreRoundTrip(t *testing.T) {
 	if !gotEv.Get().HasFired("first-egg") {
 		t.Fatal("fired event not preserved")
 	}
+	if gotWorld.Seed != 99 {
+		t.Fatalf("world seed=%d, want 99", gotWorld.Seed)
+	}
 
 	got2 := economy.FromState(func() economy.State { s := got.Get(); s.Tokens = 5678; return s }())
-	if err := store.Write(info.ID, got2, gotEv); err != nil {
+	if err := store.Write(info.ID, got2, gotEv, gotWorld); err != nil {
 		t.Fatalf("second write: %v", err)
 	}
-	again, _, err := store.Read(info.ID)
+	again, _, againWorld, err := store.Read(info.ID)
 	if err != nil {
 		t.Fatalf("read after update: %v", err)
 	}
 	if again.Get().Tokens != 5678 {
 		t.Fatalf("update not persisted: got %v", again.Get().Tokens)
+	}
+	if againWorld.Seed != 99 {
+		t.Fatalf("updated world seed=%d, want 99", againWorld.Seed)
 	}
 }
 
@@ -84,7 +92,7 @@ func TestSQLiteStoreManagesMultipleSaves(t *testing.T) {
 
 	alphaState := economy.NewState()
 	alphaState.Tokens = 100
-	alpha, err := store.Create("Alpha", economy.FromState(alphaState), events.NewMachine())
+	alpha, err := store.Create("Alpha", economy.FromState(alphaState), events.NewMachine(), world.Generate(1))
 	if err != nil {
 		t.Fatalf("create alpha: %v", err)
 	}
@@ -92,7 +100,7 @@ func TestSQLiteStoreManagesMultipleSaves(t *testing.T) {
 	betaState := economy.NewState()
 	betaState.Tokens = 200
 	betaState.Eggs = 10
-	beta, err := store.Create("Beta", economy.FromState(betaState), events.NewMachine())
+	beta, err := store.Create("Beta", economy.FromState(betaState), events.NewMachine(), world.Generate(2))
 	if err != nil {
 		t.Fatalf("create beta: %v", err)
 	}
@@ -122,7 +130,7 @@ func TestSQLiteStoreManagesMultipleSaves(t *testing.T) {
 	if err := store.Delete(beta.ID); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
-	if _, _, err := store.Read(beta.ID); !errors.Is(err, ErrSaveNotFound) {
+	if _, _, _, err := store.Read(beta.ID); !errors.Is(err, ErrSaveNotFound) {
 		t.Fatalf("read deleted save err=%v, want ErrSaveNotFound", err)
 	}
 	saves, err = store.List()
@@ -169,12 +177,61 @@ func TestSQLiteStoreImportsLegacyFlock(t *testing.T) {
 	if saves[0].Name != "Flock 1" || saves[0].Tokens != 42 {
 		t.Fatalf("bad migrated summary: %+v", saves[0])
 	}
-	got, gotEv, err := store.Read(saves[0].ID)
+	got, gotEv, gotWorld, err := store.Read(saves[0].ID)
 	if err != nil {
 		t.Fatalf("read migrated save: %v", err)
 	}
 	if got.Get().Owned["gpu"] != 2 || !gotEv.Get().HasFired("first-egg") {
 		t.Fatalf("legacy state not preserved: econ=%+v events=%+v", got.Get(), gotEv.Get())
+	}
+	if gotWorld.Seed != world.DefaultSeed {
+		t.Fatalf("legacy world seed=%d, want %d", gotWorld.Seed, world.DefaultSeed)
+	}
+}
+
+func TestSQLiteStoreDoesNotResurrectLegacySaveAfterDelete(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "save.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("open legacy db: %v", err)
+	}
+	if _, err := db.Exec(legacySchema); err != nil {
+		t.Fatalf("create legacy schema: %v", err)
+	}
+	_, err = db.Exec(`INSERT INTO flock (
+        id, tokens, total_earned, per_click, eggs, peak_eggs, eggs_laid,
+        eggs_bought, consumers, price_factor, owned, upgrades, transactions,
+        price_candles, price_candle_beats, ledger, fired_events, last_seen
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		legacySaveID, 42.0, 42.0, 1.0, 3.0, 3.0, 3.0,
+		0.0, 0.0, 1.0, `{"gpu":2}`, `{}`, `[]`,
+		`[]`, 0, `[]`, `{"first-egg":true}`, int64(1234))
+	if err != nil {
+		t.Fatalf("insert legacy save: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("close legacy db: %v", err)
+	}
+
+	store := SQLiteStore{Path: path}
+	saves, err := store.List()
+	if err != nil {
+		t.Fatalf("list migrated saves: %v", err)
+	}
+	if len(saves) != 1 {
+		t.Fatalf("migrated save count=%d, want 1", len(saves))
+	}
+
+	if err := store.Delete(saves[0].ID); err != nil {
+		t.Fatalf("delete migrated save: %v", err)
+	}
+
+	saves, err = store.List()
+	if err != nil {
+		t.Fatalf("list after delete: %v", err)
+	}
+	if len(saves) != 0 {
+		t.Fatalf("legacy save resurrected after delete: %+v", saves)
 	}
 }
 

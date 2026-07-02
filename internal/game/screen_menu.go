@@ -13,6 +13,7 @@ import (
 	"github.com/codyconfer/goose/internal/game/viewkit/panels"
 	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 	"github.com/codyconfer/goose/internal/store"
+	"github.com/codyconfer/goose/internal/world"
 )
 
 type menuAction int
@@ -92,7 +93,7 @@ func (ms *menuScreen) choose(m *Model) tea.Cmd {
 	case menuNew:
 		return ms.startNew(m)
 	case menuSave:
-		econ, ev, offline, err := store.Load(it.save.ID)
+		econ, ev, wrld, offline, err := store.Load(it.save.ID)
 		if err != nil {
 			m.setFlash(content.Text.Menu.SaveError)
 			m.refreshSaves(ms)
@@ -100,6 +101,7 @@ func (ms *menuScreen) choose(m *Model) tea.Cmd {
 		}
 		m.econ = econ
 		m.events = ev
+		m.world = wrld
 		m.offline = offline
 		m.saveID = it.save.ID
 		m.saveName = it.save.Name
@@ -118,10 +120,11 @@ func (ms *menuScreen) startNew(m *Model) tea.Cmd {
 	return nil
 }
 
-func (m *Model) foundFlock(set economy.Settings) {
+func (m *Model) foundFlock(set economy.Settings, seed int64) {
 	m.econ = economy.NewMachine()
 	m.econ.SetSettings(set)
 	m.events = events.NewMachine()
+	m.world = world.Generate(seed)
 	m.offline = 0
 	m.saveID = 0
 	m.saveName = ""

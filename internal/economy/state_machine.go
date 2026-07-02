@@ -4,6 +4,8 @@ type Machine struct {
 	s State
 }
 
+const offlineStepSeconds = 1.0
+
 func NewMachine() *Machine { return &Machine{s: NewState()} }
 
 func FromState(s State) *Machine {
@@ -83,12 +85,22 @@ func (m *Machine) ApplyOffline(away int64) float64 {
 		}
 	}
 
-	earned := m.s.TokensPerSecond() * float64(away)
-	m.earn(earned)
-
-	m.layEggs(m.s.EggsPerSecond() * float64(away))
-
-	m.RunMarket(float64(away))
-	m.TickPositions(float64(away))
+	var earned float64
+	remaining := float64(away)
+	for remaining > 0 {
+		dt := offlineStepSeconds
+		if remaining < dt {
+			dt = remaining
+		}
+		before := m.s.TotalEarned
+		m.Produce(dt)
+		earned += m.s.TotalEarned - before
+		m.UpdateConsumers(dt)
+		m.RunMarket(dt)
+		m.ProcessTransactions(dt)
+		m.UpdatePrice(dt, nil)
+		m.TickPositions(dt)
+		remaining -= dt
+	}
 	return earned
 }

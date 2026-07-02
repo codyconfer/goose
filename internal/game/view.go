@@ -124,14 +124,19 @@ func (m Model) renderMarket() string {
 }
 
 func (m Model) renderFooter() string {
-	return m.frame().HintLine(
-		[2]string{"enter", "generate"},
-		[2]string{"↑/↓", "select"},
-		[2]string{"b/→", "buy"},
-		[2]string{"s", "sell"},
-		[2]string{"t", "trade"},
-		[2]string{"q", "quit"},
-	)
+	hints := []([2]string){
+		{"enter", "generate"},
+		{"↑/↓", "select"},
+		{"b/→", "buy"},
+		{"s", "sell"},
+		{"B/S", "max queue"},
+		{"t", "trade"},
+	}
+	if m.econ.Get().Level() >= economy.SpecUnlockLevel {
+		hints = append(hints, [2]string{"O/P", "max options"})
+	}
+	hints = append(hints, [2]string{"q", "quit"})
+	return m.frame().HintLine(hints...)
 }
 
 func (m Model) renderNotification() string {

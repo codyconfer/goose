@@ -8,6 +8,7 @@ import (
 
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
+	"github.com/codyconfer/goose/internal/world"
 )
 
 var ErrSaveNotFound = errors.New("save not found")
@@ -23,9 +24,9 @@ type SaveInfo struct {
 }
 
 type Store interface {
-	Create(string, *economy.Machine, *events.Machine) (SaveInfo, error)
-	Read(int64) (*economy.Machine, *events.Machine, error)
-	Write(int64, *economy.Machine, *events.Machine) error
+	Create(string, *economy.Machine, *events.Machine, *world.State) (SaveInfo, error)
+	Read(int64) (*economy.Machine, *events.Machine, *world.State, error)
+	Write(int64, *economy.Machine, *events.Machine, *world.State) error
 	Rename(int64, string) error
 	Delete(int64) error
 	List() ([]SaveInfo, error)
@@ -34,34 +35,34 @@ type Store interface {
 
 func DefaultStore() Store { return DefaultSQLiteStore() }
 
-func Load(id int64) (*economy.Machine, *events.Machine, float64, error) {
-	econ, ev, err := DefaultStore().Read(id)
+func Load(id int64) (*economy.Machine, *events.Machine, *world.State, float64, error) {
+	econ, ev, wrld, err := DefaultStore().Read(id)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, nil, 0, err
 	}
 	var offline float64
 	if last := econ.LastSeen(); last > 0 {
 		offline = econ.ApplyOffline(time.Now().Unix() - last)
 	}
-	ev.Reconcile(econ.Get())
-	return econ, ev, offline, nil
+	ev.Reconcile(wrld.Events, econ.Get())
+	return econ, ev, wrld, offline, nil
 }
 
-func CreateSave(name string, s *economy.Machine, ev *events.Machine) (SaveInfo, error) {
+func CreateSave(name string, s *economy.Machine, ev *events.Machine, wrld *world.State) (SaveInfo, error) {
 	name = CleanName(name)
 	if name == "" {
 		return SaveInfo{}, errors.New("save name cannot be empty")
 	}
 	s.SetLastSeen(time.Now().Unix())
-	return DefaultStore().Create(name, s, ev)
+	return DefaultStore().Create(name, s, ev, wrld)
 }
 
-func Save(id int64, s *economy.Machine, ev *events.Machine) error {
+func Save(id int64, s *economy.Machine, ev *events.Machine, wrld *world.State) error {
 	if id <= 0 {
 		return ErrSaveNotFound
 	}
 	s.SetLastSeen(time.Now().Unix())
-	return DefaultStore().Write(id, s, ev)
+	return DefaultStore().Write(id, s, ev, wrld)
 }
 
 func SaveExists() bool { return DefaultStore().Exists() }

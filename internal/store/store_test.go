@@ -6,6 +6,7 @@ import (
 
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
+	"github.com/codyconfer/goose/internal/world"
 )
 
 func TestFileStoreRoundTrip(t *testing.T) {
@@ -27,7 +28,8 @@ func TestFileStoreRoundTrip(t *testing.T) {
 	state.PriceCandleBeats = 2
 	m := economy.FromState(state)
 	evm := events.FromState(events.State{Fired: map[string]bool{"first-egg": true}})
-	info, err := store.Create("Flock 1", m, evm)
+	wrld := world.Generate(42)
+	info, err := store.Create("Flock 1", m, evm, wrld)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -38,7 +40,7 @@ func TestFileStoreRoundTrip(t *testing.T) {
 		t.Fatal("store reports missing after write")
 	}
 
-	got, gotEv, err := store.Read(info.ID)
+	got, gotEv, gotWorld, err := store.Read(info.ID)
 	if err != nil {
 		t.Fatalf("read back: %v", err)
 	}
@@ -55,16 +57,22 @@ func TestFileStoreRoundTrip(t *testing.T) {
 	if !gotEv.Get().HasFired("first-egg") {
 		t.Fatal("events state not preserved across the file round-trip")
 	}
+	if gotWorld.Seed != 42 {
+		t.Fatalf("world seed=%d, want 42", gotWorld.Seed)
+	}
 
 	updated := economy.FromState(func() economy.State { s := got.Get(); s.Tokens = 5678; return s }())
-	if err := store.Write(info.ID, updated, gotEv); err != nil {
+	if err := store.Write(info.ID, updated, gotEv, gotWorld); err != nil {
 		t.Fatalf("write update: %v", err)
 	}
-	again, _, err := store.Read(info.ID)
+	again, _, againWorld, err := store.Read(info.ID)
 	if err != nil {
 		t.Fatalf("read update: %v", err)
 	}
 	if again.Get().Tokens != 5678 {
 		t.Fatalf("update not persisted: got %v", again.Get().Tokens)
+	}
+	if againWorld.Seed != 42 {
+		t.Fatalf("updated world seed=%d, want 42", againWorld.Seed)
 	}
 }

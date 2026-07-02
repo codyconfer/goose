@@ -93,6 +93,24 @@ func TestLeveragedPositionGetsMarginCalled(t *testing.T) {
 	}
 }
 
+func TestMaintenanceMarginCanLiquidateBeforeFullWipe(t *testing.T) {
+	m := NewMachine()
+	m.s.Tokens = 1000
+	m.atPrice(BasePrice)
+	m.OpenPosition(PosCall, 100, 10, 60)
+	m.atPrice(BasePrice * 0.93)
+	res := m.TickPositions(1)
+	if len(res) != 1 {
+		t.Fatalf("expected maintenance liquidation, got %d results", len(res))
+	}
+	if !res[0].MarginCall {
+		t.Fatal("10x call should be liquidated once maintenance is breached")
+	}
+	if res[0].Payout <= 0 || res[0].Payout >= 35 {
+		t.Fatalf("expected haircut payout below maintenance equity, got %v", res[0].Payout)
+	}
+}
+
 func TestUnleveragedPositionSurvivesUntilExpiry(t *testing.T) {
 	m := NewMachine()
 	m.s.Tokens = 1000
@@ -167,6 +185,16 @@ func TestShockPriceSeedsTrend(t *testing.T) {
 	m.shockPrice(0.5)
 	if m.s.PriceTrend >= 0 {
 		t.Fatalf("flash crash should leave negative follow-through, trend=%v", m.s.PriceTrend)
+	}
+}
+
+func TestLeveragedExposureUsesNotional(t *testing.T) {
+	m := NewMachine()
+	m.s.Tokens = 1000
+	m.atPrice(BasePrice)
+	m.OpenPosition(PosCall, 100, 5, 60)
+	if got, want := m.s.LeveragedExposure(), 500.0; got != want {
+		t.Fatalf("leveraged exposure=%v, want %v", got, want)
 	}
 }
 

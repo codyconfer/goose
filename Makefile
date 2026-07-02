@@ -9,25 +9,28 @@ DIST_DIR := dist
 BUILD_DIR := build
 APPIMAGE_TEMPLATE_DIR := packaging/linux/appimage
 APPIMAGETOOL ?= appimagetool
-GOBIN := $(shell go env GOPATH)/bin
-GOLANGCI := $(GOBIN)/golangci-lint
-GOLANGCI_VERSION := v2.12.2
+GOLANGCI := go tool golangci-lint
+GOVULNCHECK := go tool govulncheck
 LDFLAGS := -s -w -X '$(MODULE)/internal/buildinfo.Version=$(VERSION)' -X '$(MODULE)/internal/buildinfo.Commit=$(COMMIT)' -X '$(MODULE)/internal/buildinfo.Date=$(BUILD_DATE)' -X '$(MODULE)/internal/buildinfo.Dirty=$(DIRTY)'
 
 BUMP ?= patch
 
-.PHONY: fmt lint test check hooks tools build clean version next-version release release-linux release-darwin release-windows checksums appimage-linux-amd64 appimage-linux-arm64 darwin-arm64 windows-amd64 windows-arm64 require-appimagetool require-zip
+.PHONY: fmt lint vuln test check hooks tools build clean version next-version release release-linux release-darwin release-windows checksums appimage-linux-amd64 appimage-linux-arm64 darwin-arm64 windows-amd64 windows-arm64 require-appimagetool require-zip
 
 tools:
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION)
+	@$(GOLANGCI) version >/dev/null
+	@$(GOVULNCHECK) -version >/dev/null
 
 fmt:
 	gofmt -w .
-	@[ -x "$(GOLANGCI)" ] && "$(GOLANGCI)" fmt || true
+	@$(GOLANGCI) fmt || true
 
 lint:
 	go vet ./...
-	"$(GOLANGCI)" run
+	$(GOLANGCI) run
+
+vuln:
+	$(GOVULNCHECK) ./...
 
 test:
 	go test ./...

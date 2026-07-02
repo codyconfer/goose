@@ -34,8 +34,14 @@ goose
 | `enter`    | Earn a token                    |
 | `↑` / `↓`  | Move the market selection       |
 | `b` / `→`  | Buy the selected item           |
+| `Shift+B`  | Queue a max-size buy order      |
+| `Shift+S`  | Queue a max-size sell order     |
+| `Shift+O`  | Open a maxed call option*       |
+| `Shift+P`  | Open a maxed put option*        |
 | `t`        | Open the trade desk             |
 | `q` / `esc`| Quit (your progress is saved)   |
+
+\* Requires the derivatives desk unlock.
 
 Save menu:
 
@@ -92,6 +98,8 @@ alongside the crowd:
   orders cash eggs in for tokens at the consumer price. Use `←`/`→` to pick a
   direction, `↑`/`↓` to size the order (presets up to a balance-aware **Max**),
   and `enter` to queue it.
+- From the main game screen, `Shift+B` and `Shift+S` queue those balance-aware
+  **Max** buy and sell orders instantly.
 - The queue is worked **every beat**, each order filling at the market's
   throughput (the crowd's appetite, plus a small floor so even a young flock can
   trade) and capped by what your balance or hoard can back. A buy order patiently

@@ -98,7 +98,7 @@ func TestSpecDeskViewRenders(t *testing.T) {
 	m := New(econ, events.NewMachine(), 0)
 	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
 	v := m.View()
-	for _, want := range []string{"DERIVATIVES DESK", "WRITE A CONTRACT", "OPEN POSITIONS", "Call"} {
+	for _, want := range []string{"DERIVATIVES DESK", "WRITE A CONTRACT", "OPEN POSITIONS", "Call", "liq. price", "notional"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("spec desk view missing %q", want)
 		}

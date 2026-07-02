@@ -1,6 +1,7 @@
 package control
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +15,9 @@ func TestSendReachesListener(t *testing.T) {
 	got := make(chan Message, 1)
 	srv, err := Listen(func(m Message) { got <- m })
 	if err != nil {
+		if strings.Contains(err.Error(), "operation not permitted") {
+			t.Skipf("unix sockets unavailable in this environment: %v", err)
+		}
 		t.Fatalf("Listen: %v", err)
 	}
 	defer srv.Close()
