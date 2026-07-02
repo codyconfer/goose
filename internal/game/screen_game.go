@@ -13,6 +13,7 @@ import (
 
 type gameScreen struct {
 	cursor int
+	capex  panels.ScrollState
 }
 
 func (gs *gameScreen) simulates() bool { return true }
@@ -101,41 +102,46 @@ func (gs *gameScreen) openMaxPosition(m *Model, kind economy.PosKind) {
 
 func (gs *gameScreen) view(m *Model) string {
 	s := m.econ.Get()
-	sections := []string{
-		m.renderTitleBar(),
-		m.renderStatus(),
+	sections := []panels.Section{
+		{Content: m.renderTitleBar(), Priority: panels.Essential},
+		{Content: m.renderStatus(), Priority: panels.Essential},
 	}
 	if s.Frozen() {
-		sections = append(sections, m.renderShutdown())
+		sections = append(sections, panels.Section{Content: m.renderShutdown(), Priority: panels.Essential})
 	}
-	sections = append(sections, gs.renderCapex(m))
+	sections = append(sections, panels.Section{Content: gs.renderCapex(m), Priority: panels.Essential})
 	if s.EggsPerSecond() > 0 || s.Eggs > 0 {
-		sections = append(sections, m.renderMarket())
+		sections = append(sections, panels.Section{Content: m.renderMarket(), Priority: 40})
 	}
 	if len(s.Transactions) > 0 || s.Demand() > 0 {
-		sections = append(sections, renderTransactions(m))
+		sections = append(sections, panels.Section{Content: renderTransactions(m, panels.ScrollState{}), Priority: 30})
 	}
 	sections = append(sections,
-		m.renderActivity(),
-		m.renderTapper(),
+		panels.Section{Content: m.renderActivity(), Priority: 20},
+		panels.Section{Content: m.renderTapper(), Priority: panels.Essential},
+		panels.Section{Content: panels.Flash(m.flash), Priority: 10},
+		panels.Section{Content: m.renderFooter(), Priority: panels.Essential},
 	)
-	sections = append(sections, panels.Flash(m.flash))
-	sections = append(sections, m.renderFooter())
-	return panels.Stack(sections...)
+	return panels.StackFit(m.bodyBudget(), sections...)
 }
 
 func (gs *gameScreen) renderCapex(m *Model) string {
 	vk := m.frame()
 	var lines []string
+	selected := 0
 	for i, it := range m.items {
 		if m.unlocked(it) {
+			if i == gs.cursor {
+				selected = len(lines)
+			}
 			lines = append(lines, gs.capexRow(m, i, it))
 		}
 	}
 	if teaser, ok := m.nextLockedTeaser(); ok {
 		lines = append(lines, teaser)
 	}
-	return vk.Panel(content.Text.Capex.Panel, lines...)
+	gs.capex.Reveal(selected, len(lines), capexRows)
+	return vk.ScrollPanel(content.Text.Capex.Panel, lines, capexRows, gs.capex.Offset)
 }
 
 func (gs *gameScreen) capexRow(m *Model, i int, it capexItem) string {

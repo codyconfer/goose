@@ -25,6 +25,7 @@ type Model struct {
 	upBeats int
 
 	width, height int
+	pageScroll    int
 
 	pulse    float64
 	flash    string
@@ -84,9 +85,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		m.clampPageScroll()
 		return m, nil
 
 	case upBeatMsg:
+		prev := m.screen
 		dt := m.clock.beat(time.Time(msg))
 		if !m.screen.simulates() {
 			return m, upBeat()
@@ -105,16 +108,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if cs, ok := m.screen.(*characterScreen); ok {
 			cs.tick(&m)
 		}
+		m.syncPageScroll(prev)
 		return m, upBeat()
 
 	case tea.KeyMsg:
-		return m, m.screen.handleKey(&m, msg)
+		if m.handlePageScroll(msg) {
+			return m, nil
+		}
+		prev := m.screen
+		cmd := m.screen.handleKey(&m, msg)
+		m.syncPageScroll(prev)
+		return m, cmd
 
 	case ControlMsg:
+		prev := m.screen
 		m.applyControl(msg)
+		m.syncPageScroll(prev)
 		return m, nil
 	}
 	return m, nil
+}
+
+func (m *Model) syncPageScroll(prev screen) {
+	if prev != m.screen {
+		m.pageScroll = 0
+		return
+	}
+	m.clampPageScroll()
 }
 
 func (m *Model) beatFast(dt float64) {

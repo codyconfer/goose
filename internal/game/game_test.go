@@ -12,6 +12,7 @@ import (
 	"github.com/codyconfer/goose/internal/characters"
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
+	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 	"github.com/codyconfer/goose/internal/notify"
 	"github.com/codyconfer/goose/internal/store"
 	"github.com/codyconfer/goose/internal/world"
@@ -25,8 +26,16 @@ func key(s string) tea.KeyMsg {
 		return tea.KeyMsg{Type: tea.KeyUp}
 	case "down":
 		return tea.KeyMsg{Type: tea.KeyDown}
+	case "pgup":
+		return tea.KeyMsg{Type: tea.KeyPgUp}
+	case "pgdown":
+		return tea.KeyMsg{Type: tea.KeyPgDown}
 	case "backspace":
 		return tea.KeyMsg{Type: tea.KeyBackspace}
+	case "ctrl+d":
+		return tea.KeyMsg{Type: tea.KeyCtrlD}
+	case "ctrl+u":
+		return tea.KeyMsg{Type: tea.KeyCtrlU}
 	default:
 		return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
 	}
@@ -356,7 +365,7 @@ func TestViewRendersEveryScreen(t *testing.T) {
 	}
 }
 
-func TestNarrowMenuViewBoundsLongSaveNames(t *testing.T) {
+func TestNarrowMenuViewRequestsWiderTerminal(t *testing.T) {
 	isolateHome(t)
 	name := strings.Repeat("LongSaveName", 8)
 	state := economy.NewState()
@@ -370,10 +379,156 @@ func TestNarrowMenuViewBoundsLongSaveNames(t *testing.T) {
 	m = next.(Model)
 	view := m.View()
 	if strings.Contains(view, name) {
-		t.Fatalf("view rendered unbounded save name")
+		t.Fatalf("view rendered save content despite a too-narrow screen")
 	}
-	if got := maxLineWidth(view); got > 52 {
-		t.Fatalf("max line width=%d, want <= 52:\n%s", got, view)
+	if !strings.Contains(view, "TERMINAL TOO NARROW") {
+		t.Fatalf("view did not request a wider terminal:\n%s", view)
+	}
+	if got := maxLineWidth(view); got > 48 {
+		t.Fatalf("max line width=%d, want <= 48:\n%s", got, view)
+	}
+}
+
+func TestViewRequiresMinimumScreenWidthForExistingScreens(t *testing.T) {
+	isolateHome(t)
+
+	s := economy.NewState()
+	s.Tokens = 5000
+	seededGame := New(economy.FromState(s), events.NewMachine(), 0)
+	ch := mustBuildCharacter(t, seededGame, "vc", s)
+
+	tests := []struct {
+		name   string
+		build  func() Model
+		hidden string
+	}{
+		{
+			name: "menu",
+			build: func() Model {
+				return NewMenu()
+			},
+			hidden: "GOLDEN GOOSE",
+		},
+		{
+			name: "game",
+			build: func() Model {
+				return New(economy.NewMachine(), events.NewMachine(), 0)
+			},
+			hidden: "CAPEX",
+		},
+		{
+			name: "settings",
+			build: func() Model {
+				m := NewMenu()
+				m.screen = newSettingsScreen()
+				return m
+			},
+			hidden: "NEW FLOCK",
+		},
+		{
+			name: "trade",
+			build: func() Model {
+				m := New(economy.NewMachine(), events.NewMachine(), 0)
+				m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
+				return m
+			},
+			hidden: "TRADE DESK",
+		},
+		{
+			name: "spec",
+			build: func() Model {
+				m := New(economy.FromState(leveledState()), events.NewMachine(), 0)
+				m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
+				return m
+			},
+			hidden: "DERIVATIVES DESK",
+		},
+		{
+			name: "character",
+			build: func() Model {
+				m := New(economy.FromState(s), events.NewMachine(), 0)
+				m.screen = &characterScreen{char: &ch, prev: &gameScreen{}}
+				return m
+			},
+			hidden: "VENTURE CAPITALIST",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := tt.build()
+			next, _ := m.Update(tea.WindowSizeMsg{Width: theme.MinScreenWidth - 1, Height: 24})
+			m = next.(Model)
+
+			view := m.View()
+			for _, want := range []string{"TERMINAL TOO NARROW", "80", "79"} {
+				if !strings.Contains(view, want) {
+					t.Fatalf("view missing %q:\n%s", want, view)
+				}
+			}
+			if strings.Contains(view, tt.hidden) {
+				t.Fatalf("view rendered %q on a too-narrow screen:\n%s", tt.hidden, view)
+			}
+		})
+	}
+}
+
+func TestPageScrollRevealsOffscreenPanels(t *testing.T) {
+	s := economy.NewState()
+	s.Tokens = 1000
+	econ := economy.FromState(s)
+	for i := 0; i < 12; i++ {
+		econ.ScheduleTrade(economy.TxBuyEggs, float64(i+1)*10)
+	}
+	econ.BuyProducer(economy.Producers[0])
+
+	m := New(econ, events.NewMachine(), 0)
+	m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
+	next, _ := m.Update(tea.WindowSizeMsg{Width: theme.MinScreenWidth, Height: 18})
+	m = next.(Model)
+
+	// At this height the essential panels alone overflow the viewport, so the
+	// queue starts below the fold while the hint footer stays pinned. (Droppable
+	// panels like the ledger are shed entirely rather than pushed off-screen.)
+	if view := m.View(); strings.Contains(view, "TRADE QUEUE") {
+		t.Fatalf("queue should start below the viewport:\n%s", view)
+	}
+	if view := m.View(); !strings.Contains(view, "ctrl+u/d") {
+		t.Fatalf("sticky footer legend missing before scroll:\n%s", view)
+	}
+
+	view := m.View()
+	for range 10 {
+		if strings.Contains(view, "TRADE QUEUE") {
+			break
+		}
+		m = send(m, key("ctrl+d"))
+		view = m.View()
+	}
+	if !strings.Contains(view, "TRADE QUEUE") || !strings.Contains(view, "ctrl+u/d") {
+		t.Fatalf("page scroll did not keep footer visible while revealing lower panels:\n%s", view)
+	}
+}
+
+func TestGameScreenCapexPanelScrollsToSelection(t *testing.T) {
+	s := economy.NewState()
+	s.Tokens = 1_000_000_000
+	s.PeakEggs = economy.LevelThresholds[len(economy.LevelThresholds)-1]
+
+	m := New(economy.FromState(s), events.NewMachine(), 0)
+	for range 12 {
+		m = send(m, key("down"))
+	}
+
+	gs := m.screen.(*gameScreen)
+	if gs.capex.Offset == 0 {
+		_ = m.View()
+	}
+	if gs.capex.Offset == 0 {
+		t.Fatal("capex selection did not advance the panel scroll")
+	}
+	if got := m.View(); !strings.Contains(got, "↕") {
+		t.Fatalf("capex panel missing scroll footer:\n%s", got)
 	}
 }
 
@@ -389,6 +544,7 @@ func TestActiveGameRenderAndProducerBuy(t *testing.T) {
 	s.Eggs = 500
 	s.Owned["server"] = 5
 	m := New(economy.FromState(s), events.NewMachine(), 0)
+	m.height = 120 // tall enough that no panels are dropped to fit
 	m.notifs.Push(notify.Notification{Title: "🍀 Test Notification", Message: "hi", Tone: notify.TonePositive}, 5)
 
 	v := m.View()

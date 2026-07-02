@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 )
 
 func TestHeaderRendersTitleDetailAndRule(t *testing.T) {
@@ -67,5 +69,28 @@ func TestFrameSelectableTruncatesLabel(t *testing.T) {
 	out := NewFrame(24).Selectable("a very long selectable label that should fit", true)
 	if got := ansi.StringWidth(out); got > 24 {
 		t.Fatalf("selectable width=%d, want <= 24: %q", got, stripANSI(out))
+	}
+}
+
+func TestScreenFrameUsesMinimumSupportedWidth(t *testing.T) {
+	f := ScreenFrame(theme.MinScreenWidth)
+	if f.Width != theme.MinScreenBodyWidth {
+		t.Fatalf("screen frame width=%d, want %d", f.Width, theme.MinScreenBodyWidth)
+	}
+	if FitsScreenWidth(theme.MinScreenWidth - 1) {
+		t.Fatalf("screen width %d should be rejected", theme.MinScreenWidth-1)
+	}
+}
+
+func TestTooNarrowFitsCurrentScreenWidth(t *testing.T) {
+	width := theme.MinScreenWidth - 1
+	out := TooNarrow(width)
+	if !strings.Contains(stripANSI(out), "80") || !strings.Contains(stripANSI(out), "79") {
+		t.Fatalf("too-narrow message missing expected dimensions: %q", stripANSI(out))
+	}
+	for line := range strings.SplitSeq(out, "\n") {
+		if got := ansi.StringWidth(line); got > width-theme.AppMarginX*2 {
+			t.Fatalf("too-narrow line width=%d, want <= %d: %q", got, width-theme.AppMarginX*2, stripANSI(line))
+		}
 	}
 }

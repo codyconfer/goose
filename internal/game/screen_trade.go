@@ -26,6 +26,7 @@ type tradeScreen struct {
 	prev    *gameScreen
 	kind    economy.TxKind
 	sizeIdx int
+	queue   panels.ScrollState
 	ledger  panels.ScrollState
 }
 
@@ -55,12 +56,16 @@ func (ts *tradeScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 			m.setFlash(content.Text.Trade.ClearedFlash)
 		}
 	case "x":
-		if m.econ.CancelTransaction(0) {
+		if m.econ.CancelTransaction(ts.queue.Offset) {
 			m.setFlash(content.Text.Trade.CancelledFlash)
 		}
-	case "pgup", ",":
+	case "pgup":
+		ts.queue.Scroll(-queueRows, len(m.econ.Get().Transactions), queueRows)
+	case "pgdown":
+		ts.queue.Scroll(queueRows, len(m.econ.Get().Transactions), queueRows)
+	case ",":
 		ts.ledger.Scroll(-ledgerRows, len(m.econ.Get().Ledger), ledgerRows)
-	case "pgdown", ".":
+	case ".":
 		ts.ledger.Scroll(ledgerRows, len(m.econ.Get().Ledger), ledgerRows)
 	}
 	return nil
@@ -123,22 +128,24 @@ func (ts *tradeScreen) view(m *Model) string {
 		{"enter", "queue"},
 		{"x", "cancel"},
 		{"c", "clear"},
-		{"pgup/pgdn", "ledger"},
+		{"pgup/pgdn", "queue"},
+		{",/.", "ledger"},
+		{"ctrl+u/d", "page"},
 	}
 	if s.Level() >= economy.SpecUnlockLevel {
 		hints = append(hints, [2]string{"d", "derivatives"})
 	}
 	hints = append(hints, [2]string{"esc", "back"})
-	return panels.Stack(
-		vk.Header(content.Text.Trade.DeskTitle),
-		purse,
-		renderPriceChart(m),
-		renderFlow(m),
-		ts.renderBuilder(m),
-		renderTransactions(m),
-		renderLedger(m, ts.ledger),
-		panels.Flash(vk.Fit(m.flash)),
-		vk.HintLine(hints...),
+	return panels.StackFit(m.bodyBudget(),
+		panels.Section{Content: vk.Header(content.Text.Trade.DeskTitle), Priority: panels.Essential},
+		panels.Section{Content: purse, Priority: panels.Essential},
+		panels.Section{Content: renderPriceChart(m), Priority: 40},
+		panels.Section{Content: renderFlow(m), Priority: 30},
+		panels.Section{Content: ts.renderBuilder(m), Priority: panels.Essential},
+		panels.Section{Content: renderTransactions(m, ts.queue), Priority: panels.Essential},
+		panels.Section{Content: renderLedger(m, ts.ledger), Priority: 20},
+		panels.Section{Content: panels.Flash(vk.Fit(m.flash)), Priority: 10},
+		panels.Section{Content: vk.HintLine(hints...), Priority: panels.Essential},
 	)
 }
 
@@ -226,19 +233,20 @@ func toOHLC(cs []candle) []panels.OHLC {
 	return out
 }
 
-func renderTransactions(m *Model) string {
+func renderTransactions(m *Model, sv panels.ScrollState) string {
 	vk := m.frame()
-	var lines []string
 	s := m.econ.Get()
+	var prefix []string
 
 	if s.Demand() > 0 {
 		left := theme.EggSty.Render(content.Text.Trade.QueueConsumersLabel) + theme.DimSty.Render(content.Text.Trade.QueueConsumersSuffix)
 		right := theme.CanSty.Render("+" + economy.FormatNum(m.sellRate) + " /sec")
-		lines = append(lines, vk.Spread(left, right))
+		prefix = append(prefix, vk.Spread(left, right))
 	}
 
+	lines := make([]string, 0, len(s.Transactions))
 	for i, o := range s.Transactions {
-		marker := panels.Cursor(i == 0)
+		marker := panels.Cursor(i == sv.Offset)
 		label := fmt.Sprintf("%s %s 🥚", tradeVerb(o.Kind), economy.FormatNum(o.Amount))
 		frac := 0.0
 		if o.Amount > 0 {
@@ -250,9 +258,9 @@ func renderTransactions(m *Model) string {
 	}
 
 	if len(lines) == 0 {
-		lines = append(lines, theme.DimSty.Render(content.Text.Trade.QueueQuiet))
+		return vk.Panel(content.Text.Trade.QueuePanel, append(prefix, theme.DimSty.Render(content.Text.Trade.QueueQuiet))...)
 	}
-	return vk.ScrollPanel(content.Text.Trade.QueuePanel, lines, queueRows, 0)
+	return vk.ScrollPanelWithPrefix(content.Text.Trade.QueuePanel, prefix, lines, queueRows, sv.Offset)
 }
 
 func tradeVerb(k economy.TxKind) string {
@@ -286,8 +294,11 @@ func tradeCompletedMsg(o economy.Transaction) string {
 }
 
 const (
-	ledgerRows = 8
-	queueRows  = 8
+	capexRows    = 8
+	ledgerRows   = 8
+	pnlRows      = 8
+	positionRows = 8
+	queueRows    = 8
 )
 
 func renderLedger(m *Model, sv panels.ScrollState) string {

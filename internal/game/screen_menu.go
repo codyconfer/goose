@@ -228,11 +228,13 @@ func (ms *menuScreen) view(m *Model) string {
 		b.WriteString(vk.HintLine(
 			[2]string{"enter", "save"},
 			[2]string{"esc", "cancel"},
+			[2]string{"ctrl+u/d", "page"},
 		))
 	case menuModeDelete:
 		b.WriteString(vk.HintLine(
 			[2]string{"y", "delete"},
 			[2]string{"n", "cancel"},
+			[2]string{"ctrl+u/d", "page"},
 		))
 	default:
 		b.WriteString(vk.HintLine(
@@ -241,6 +243,7 @@ func (ms *menuScreen) view(m *Model) string {
 			[2]string{"n", "new"},
 			[2]string{"r", "rename"},
 			[2]string{"x", "delete"},
+			[2]string{"ctrl+u/d", "page"},
 			[2]string{"q", "quit"},
 		))
 	}

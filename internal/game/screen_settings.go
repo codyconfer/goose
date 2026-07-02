@@ -171,6 +171,7 @@ func (ss *settingsScreen) view(m *Model) string {
 		[2]string{"←/→", "change"},
 		[2]string{"r", "reroll seed"},
 		[2]string{"enter", "hatch flock"},
+		[2]string{"ctrl+u/d", "page"},
 		[2]string{"esc", "back"},
 	))
 	return b.String()
