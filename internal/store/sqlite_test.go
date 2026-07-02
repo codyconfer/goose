@@ -8,7 +8,7 @@ import (
 
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
-	"github.com/codyconfer/goose/internal/worldgen"
+	"github.com/codyconfer/goose/internal/world"
 )
 
 func TestSQLiteStoreRoundTrip(t *testing.T) {
@@ -32,7 +32,7 @@ func TestSQLiteStoreRoundTrip(t *testing.T) {
 	state.PriceCandleBeats = 2
 	m := economy.FromState(state)
 	evm := events.FromState(events.State{Fired: map[string]bool{"first-egg": true}})
-	wrld := worldgen.Generate(99)
+	wrld := world.Generate(99)
 	info, err := store.Create("Flock 1", m, evm, wrld)
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -92,7 +92,7 @@ func TestSQLiteStoreManagesMultipleSaves(t *testing.T) {
 
 	alphaState := economy.NewState()
 	alphaState.Tokens = 100
-	alpha, err := store.Create("Alpha", economy.FromState(alphaState), events.NewMachine(), worldgen.Generate(1))
+	alpha, err := store.Create("Alpha", economy.FromState(alphaState), events.NewMachine(), world.Generate(1))
 	if err != nil {
 		t.Fatalf("create alpha: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestSQLiteStoreManagesMultipleSaves(t *testing.T) {
 	betaState := economy.NewState()
 	betaState.Tokens = 200
 	betaState.Eggs = 10
-	beta, err := store.Create("Beta", economy.FromState(betaState), events.NewMachine(), worldgen.Generate(2))
+	beta, err := store.Create("Beta", economy.FromState(betaState), events.NewMachine(), world.Generate(2))
 	if err != nil {
 		t.Fatalf("create beta: %v", err)
 	}
@@ -184,8 +184,8 @@ func TestSQLiteStoreImportsLegacyFlock(t *testing.T) {
 	if got.Get().Owned["gpu"] != 2 || !gotEv.Get().HasFired("first-egg") {
 		t.Fatalf("legacy state not preserved: econ=%+v events=%+v", got.Get(), gotEv.Get())
 	}
-	if gotWorld.Seed != worldgen.DefaultSeed {
-		t.Fatalf("legacy world seed=%d, want %d", gotWorld.Seed, worldgen.DefaultSeed)
+	if gotWorld.Seed != world.DefaultSeed {
+		t.Fatalf("legacy world seed=%d, want %d", gotWorld.Seed, world.DefaultSeed)
 	}
 }
 

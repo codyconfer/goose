@@ -1,20 +1,20 @@
-package worldgen
+package world
 
 import (
 	"math/rand"
+	"sort"
 
 	"github.com/codyconfer/goose/internal/content"
-	"github.com/codyconfer/goose/internal/world"
 )
 
 const DefaultSeed int64 = 1
 
-func Generate(seed int64) *world.State {
+func Generate(seed int64) *State {
 	r := rand.New(rand.NewSource(seed))
-	out := &world.State{
+	out := &State{
 		Seed:       seed,
-		Events:     make([]world.Event, 0, len(content.Narrative.Events)),
-		Characters: make([]world.Character, 0, len(content.Narrative.Characters)),
+		Events:     make([]Event, 0, len(content.Narrative.Events)),
+		Characters: make([]Character, 0, len(content.Narrative.Characters)),
 	}
 	for _, tmpl := range content.Narrative.Events {
 		out.Events = append(out.Events, generateEvent(tmpl, r))
@@ -25,8 +25,8 @@ func Generate(seed int64) *world.State {
 	return out
 }
 
-func generateEvent(tmpl content.EventTemplate, r *rand.Rand) world.Event {
-	return world.Event{
+func generateEvent(tmpl content.EventTemplate, r *rand.Rand) Event {
+	return Event{
 		Key:        tmpl.Key,
 		Trigger:    generateTrigger(tmpl.Trigger, r),
 		Conditions: convertConditions(tmpl.Conditions),
@@ -35,13 +35,13 @@ func generateEvent(tmpl content.EventTemplate, r *rand.Rand) world.Event {
 	}
 }
 
-func generateCharacter(tmpl content.CharacterTemplate, r *rand.Rand) world.Character {
+func generateCharacter(tmpl content.CharacterTemplate, r *rand.Rand) Character {
 	text := generateText(tmpl.Text, r)
 	name := text["name"]
 	if name == "" {
 		name = tmpl.Key
 	}
-	return world.Character{
+	return Character{
 		Key:        tmpl.Key,
 		Headline:   tmpl.Headline,
 		Name:       name,
@@ -55,8 +55,8 @@ func generateCharacter(tmpl content.CharacterTemplate, r *rand.Rand) world.Chara
 	}
 }
 
-func generateTrigger(tmpl content.TriggerTemplate, r *rand.Rand) world.Trigger {
-	return world.Trigger{
+func generateTrigger(tmpl content.TriggerTemplate, r *rand.Rand) Trigger {
+	return Trigger{
 		Type:   tmpl.Type,
 		P:      resolveRange(tmpl.P, r),
 		Level:  tmpl.Level,
@@ -99,17 +99,22 @@ func generateText(src map[string][]string, r *rand.Rand) map[string]string {
 	if len(src) == 0 {
 		return nil
 	}
+	keys := make([]string, 0, len(src))
+	for key := range src {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
 	out := make(map[string]string, len(src))
-	for key, options := range src {
-		out[key] = chooseText(options, r)
+	for _, key := range keys {
+		out[key] = chooseText(src[key], r)
 	}
 	return out
 }
 
-func generateOptions(opts []content.OptionTemplate, r *rand.Rand) []world.Option {
-	out := make([]world.Option, len(opts))
+func generateOptions(opts []content.OptionTemplate, r *rand.Rand) []Option {
+	out := make([]Option, len(opts))
 	for i, opt := range opts {
-		out[i] = world.Option{
+		out[i] = Option{
 			Label:    opt.Label,
 			Desc:     opt.Desc,
 			Outcomes: generateOutcomes(opt.Outcomes, r),
@@ -118,10 +123,10 @@ func generateOptions(opts []content.OptionTemplate, r *rand.Rand) []world.Option
 	return out
 }
 
-func generateOutcomes(templates []content.OutcomeTemplate, r *rand.Rand) []world.Outcome {
-	out := make([]world.Outcome, len(templates))
+func generateOutcomes(templates []content.OutcomeTemplate, r *rand.Rand) []Outcome {
+	out := make([]Outcome, len(templates))
 	for i, tmpl := range templates {
-		out[i] = world.Outcome{
+		out[i] = Outcome{
 			Weight:  resolveRange(tmpl.Weight, r),
 			Tone:    tmpl.Tone,
 			Title:   chooseText(tmpl.Titles, r),
@@ -152,13 +157,13 @@ func resolveRange(spec content.RangeValue, r *rand.Rand) float64 {
 	}
 }
 
-func convertConditions(src []content.Condition) []world.Condition {
+func convertConditions(src []content.Condition) []Condition {
 	if len(src) == 0 {
 		return nil
 	}
-	out := make([]world.Condition, len(src))
+	out := make([]Condition, len(src))
 	for i, cond := range src {
-		out[i] = world.Condition{
+		out[i] = Condition{
 			Left:  convertExpr(cond.Left),
 			Op:    cond.Op,
 			Right: convertExpr(cond.Right),
@@ -167,24 +172,24 @@ func convertConditions(src []content.Condition) []world.Condition {
 	return out
 }
 
-func convertValueDefs(src []content.ValueDef) []world.ValueDef {
+func convertValueDefs(src []content.ValueDef) []ValueDef {
 	if len(src) == 0 {
 		return nil
 	}
-	out := make([]world.ValueDef, len(src))
+	out := make([]ValueDef, len(src))
 	for i, def := range src {
-		out[i] = world.ValueDef{Key: def.Key, Value: convertExpr(def.Value)}
+		out[i] = ValueDef{Key: def.Key, Value: convertExpr(def.Value)}
 	}
 	return out
 }
 
-func convertEffects(src []content.Effect) []world.Effect {
+func convertEffects(src []content.Effect) []Effect {
 	if len(src) == 0 {
 		return nil
 	}
-	out := make([]world.Effect, len(src))
+	out := make([]Effect, len(src))
 	for i, eff := range src {
-		out[i] = world.Effect{
+		out[i] = Effect{
 			Type:   eff.Type,
 			Value:  convertExpr(eff.Value),
 			Factor: convertExpr(eff.Factor),
@@ -197,8 +202,8 @@ func convertEffects(src []content.Effect) []world.Effect {
 	return out
 }
 
-func convertExpr(expr content.Expr) world.Expr {
-	out := world.Expr{
+func convertExpr(expr content.Expr) Expr {
+	out := Expr{
 		Op:     expr.Op,
 		Value:  expr.Value,
 		Name:   expr.Name,
@@ -209,7 +214,7 @@ func convertExpr(expr content.Expr) world.Expr {
 		MaxInt: expr.MaxInt,
 	}
 	if len(expr.Args) > 0 {
-		out.Args = make([]world.Expr, len(expr.Args))
+		out.Args = make([]Expr, len(expr.Args))
 		for i, arg := range expr.Args {
 			out.Args[i] = convertExpr(arg)
 		}

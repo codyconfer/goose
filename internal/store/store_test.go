@@ -6,7 +6,7 @@ import (
 
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
-	"github.com/codyconfer/goose/internal/worldgen"
+	"github.com/codyconfer/goose/internal/world"
 )
 
 func TestFileStoreRoundTrip(t *testing.T) {
@@ -28,7 +28,7 @@ func TestFileStoreRoundTrip(t *testing.T) {
 	state.PriceCandleBeats = 2
 	m := economy.FromState(state)
 	evm := events.FromState(events.State{Fired: map[string]bool{"first-egg": true}})
-	wrld := worldgen.Generate(42)
+	wrld := world.Generate(42)
 	info, err := store.Create("Flock 1", m, evm, wrld)
 	if err != nil {
 		t.Fatalf("create: %v", err)

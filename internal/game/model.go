@@ -13,7 +13,6 @@ import (
 	"github.com/codyconfer/goose/internal/notify"
 	"github.com/codyconfer/goose/internal/store"
 	"github.com/codyconfer/goose/internal/world"
-	"github.com/codyconfer/goose/internal/worldgen"
 )
 
 type Model struct {
@@ -51,7 +50,7 @@ func New(s *economy.Machine, ev *events.Machine, offline float64) Model {
 	m := Model{
 		econ:    s,
 		events:  ev,
-		world:   worldgen.Generate(worldgen.DefaultSeed),
+		world:   world.Generate(world.DefaultSeed),
 		items:   capexItems(),
 		offline: offline,
 		clock:   newClock(time.Now()),

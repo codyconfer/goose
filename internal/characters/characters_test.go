@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/worldgen"
+	"github.com/codyconfer/goose/internal/world"
 )
 
 func richState() economy.State {
@@ -19,7 +19,7 @@ func richState() economy.State {
 }
 
 func TestGeneratedCharactersBuildAndResolve(t *testing.T) {
-	wrld := worldgen.Generate(11)
+	wrld := world.Generate(11)
 	s := richState()
 	for _, spec := range wrld.Characters {
 		if !spec.Eligible(s) {

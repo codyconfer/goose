@@ -13,7 +13,7 @@ import (
 	"github.com/codyconfer/goose/internal/game/viewkit/panels"
 	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 	"github.com/codyconfer/goose/internal/store"
-	"github.com/codyconfer/goose/internal/worldgen"
+	"github.com/codyconfer/goose/internal/world"
 )
 
 type menuAction int
@@ -124,7 +124,7 @@ func (m *Model) foundFlock(set economy.Settings, seed int64) {
 	m.econ = economy.NewMachine()
 	m.econ.SetSettings(set)
 	m.events = events.NewMachine()
-	m.world = worldgen.Generate(seed)
+	m.world = world.Generate(seed)
 	m.offline = 0
 	m.saveID = 0
 	m.saveName = ""

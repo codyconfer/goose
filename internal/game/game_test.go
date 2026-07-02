@@ -14,7 +14,7 @@ import (
 	"github.com/codyconfer/goose/internal/events"
 	"github.com/codyconfer/goose/internal/notify"
 	"github.com/codyconfer/goose/internal/store"
-	"github.com/codyconfer/goose/internal/worldgen"
+	"github.com/codyconfer/goose/internal/world"
 )
 
 func key(s string) tea.KeyMsg {
@@ -261,7 +261,7 @@ func TestMenuManagesNamedSaves(t *testing.T) {
 	isolateHome(t)
 	state := economy.NewState()
 	state.Tokens = 99
-	info, err := store.CreateSave("Alpha", economy.FromState(state), events.NewMachine(), worldgen.Generate(worldgen.DefaultSeed))
+	info, err := store.CreateSave("Alpha", economy.FromState(state), events.NewMachine(), world.Generate(world.DefaultSeed))
 	if err != nil {
 		t.Fatalf("create save: %v", err)
 	}
@@ -361,7 +361,7 @@ func TestNarrowMenuViewBoundsLongSaveNames(t *testing.T) {
 	name := strings.Repeat("LongSaveName", 8)
 	state := economy.NewState()
 	state.Tokens = 42
-	if _, err := store.CreateSave(name, economy.FromState(state), events.NewMachine(), worldgen.Generate(worldgen.DefaultSeed)); err != nil {
+	if _, err := store.CreateSave(name, economy.FromState(state), events.NewMachine(), world.Generate(world.DefaultSeed)); err != nil {
 		t.Fatalf("create save: %v", err)
 	}
 

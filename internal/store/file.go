@@ -12,7 +12,6 @@ import (
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
 	"github.com/codyconfer/goose/internal/world"
-	"github.com/codyconfer/goose/internal/worldgen"
 )
 
 type FileStore struct{ Path string }
@@ -91,7 +90,7 @@ func (fs FileStore) Read(id int64) (*economy.Machine, *events.Machine, *world.St
 		if slot.ID == id {
 			wrld := slot.World
 			if len(wrld.Events) == 0 && len(wrld.Characters) == 0 {
-				wrld = *worldgen.Generate(worldgen.DefaultSeed)
+				wrld = *world.Generate(world.DefaultSeed)
 			}
 			return economy.FromState(slot.Economy), events.FromState(slot.Events), &wrld, nil
 		}
@@ -252,7 +251,7 @@ func (coll fileSaveCollection) hasName(name string, exceptID int64) bool {
 
 func normalizeWorld(wrld *world.State) world.State {
 	if wrld == nil || (len(wrld.Events) == 0 && len(wrld.Characters) == 0) {
-		return *worldgen.Generate(worldgen.DefaultSeed)
+		return *world.Generate(world.DefaultSeed)
 	}
 	return *wrld
 }

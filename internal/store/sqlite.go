@@ -11,7 +11,6 @@ import (
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
 	"github.com/codyconfer/goose/internal/world"
-	"github.com/codyconfer/goose/internal/worldgen"
 
 	_ "modernc.org/sqlite"
 )
@@ -264,7 +263,7 @@ func migrateLegacyFlock(db *sql.DB) error {
 	if err != nil || !ok {
 		return err
 	}
-	econJSON, eventsJSON, worldJSON, err := marshalSave(econ, ev, worldgen.Generate(worldgen.DefaultSeed))
+	econJSON, eventsJSON, worldJSON, err := marshalSave(econ, ev, world.Generate(world.DefaultSeed))
 	if err != nil {
 		return err
 	}
@@ -407,7 +406,7 @@ func ensureWorldColumn(db *sql.DB) error {
 
 func normalizeSQLiteWorld(wrld *world.State) world.State {
 	if wrld == nil || (len(wrld.Events) == 0 && len(wrld.Characters) == 0) {
-		return *worldgen.Generate(worldgen.DefaultSeed)
+		return *world.Generate(world.DefaultSeed)
 	}
 	return *wrld
 }
