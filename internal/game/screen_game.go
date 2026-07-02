@@ -89,10 +89,11 @@ func (gs *gameScreen) openMaxPosition(m *Model, kind economy.PosKind) {
 		m.setFlash(fmt.Sprintf(content.Text.Trade.SpecLockedFmt, economy.SpecUnlockLevel))
 		return
 	}
+	// Calls and puts can be opened on credit, so when nothing is affordable we
+	// still open the smallest premium and let it push tokens negative.
 	premiumIdx := maxAffordableSpecPremiumIdx(m.econ.Get().Tokens)
 	if premiumIdx < 0 {
-		m.setFlash(content.Text.Spec.CantAfford)
-		return
+		premiumIdx = 0
 	}
 	ss := specScreen{
 		kind:        kind,

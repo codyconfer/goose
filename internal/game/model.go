@@ -26,6 +26,7 @@ type Model struct {
 
 	width, height int
 	pageScroll    int
+	scrollable    bool
 
 	pulse    float64
 	flash    string

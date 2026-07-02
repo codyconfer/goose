@@ -123,19 +123,19 @@ func (ts *tradeScreen) view(m *Model) string {
 	)
 
 	hints := []([2]string){
-		{"←/→", "buy/sell"},
-		{"↑/↓", "amount"},
-		{"enter", "queue"},
-		{"x", "cancel"},
-		{"c", "clear"},
-		{"pgup/pgdn", "queue"},
-		{",/.", "ledger"},
-		{"ctrl+u/d", "page"},
+		toggleHint("buy/sell"),
+		verticalHint("amount"),
+		confirmHint("queue"),
+		hint("x", "cancel"),
+		hint("c", "clear"),
+		hint("pgup/pgdn", "queue"),
+		hint(",/.", "ledger"),
 	}
+	hints = append(hints, m.pageHintPairs()...)
 	if s.Level() >= economy.SpecUnlockLevel {
-		hints = append(hints, [2]string{"d", "derivatives"})
+		hints = append(hints, hint("d", "derivatives"))
 	}
-	hints = append(hints, [2]string{"esc", "back"})
+	hints = append(hints, hint("esc/t/q", "back"))
 	return panels.StackFit(m.bodyBudget(),
 		panels.Section{Content: vk.Header(content.Text.Trade.DeskTitle), Priority: panels.Essential},
 		panels.Section{Content: purse, Priority: panels.Essential},

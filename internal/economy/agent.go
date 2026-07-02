@@ -1,16 +1,14 @@
 package economy
 
-// AgentMetric is the live market reading an agent watches.
 type AgentMetric string
 
 const (
-	MetricTrend  AgentMetric = "trend"  // signed trend strength, -1 (bearish) .. +1 (bullish)
-	MetricPrice  AgentMetric = "price"  // tokens per egg
-	MetricTokens AgentMetric = "tokens" // cash on hand
-	MetricEggs   AgentMetric = "eggs"   // egg holdings
+	MetricTrend  AgentMetric = "trend"
+	MetricPrice  AgentMetric = "price"
+	MetricTokens AgentMetric = "tokens"
+	MetricEggs   AgentMetric = "eggs"
 )
 
-// AgentCmp is the direction of the trigger comparison.
 type AgentCmp string
 
 const (
@@ -18,7 +16,6 @@ const (
 	CmpBelow AgentCmp = "below"
 )
 
-// AgentAction is what the agent does with your money when it fires.
 type AgentAction string
 
 const (
@@ -28,9 +25,6 @@ const (
 	ActOpenPut  AgentAction = "open-put"
 )
 
-// Agent is a hands-off trading rule: when Metric Cmp Threshold holds on the slow
-// beat, it runs Action with Size. The strategy (metric/cmp/action) is fixed per
-// agent — its personality — while the player toggles it and tunes Size/Threshold.
 type Agent struct {
 	Key       string      `json:"key"`
 	Enabled   bool        `json:"enabled"`
@@ -38,10 +32,9 @@ type Agent struct {
 	Cmp       AgentCmp    `json:"cmp"`
 	Threshold float64     `json:"threshold"`
 	Action    AgentAction `json:"action"`
-	Size      float64     `json:"size"` // egg quantity for trades; premium for options
+	Size      float64     `json:"size"`
 }
 
-// TradesOptions reports whether the agent opens derivatives (vs. spot egg trades).
 func (a Agent) TradesOptions() bool {
 	return a.Action == ActOpenCall || a.Action == ActOpenPut
 }
@@ -69,7 +62,6 @@ func (a Agent) fires(s State) bool {
 	return v > a.Threshold
 }
 
-// SignedTrendStrength maps the price trend onto -1 (max bearish) .. +1 (max bullish).
 func (s State) SignedTrendStrength() float64 {
 	st := s.TrendStrength()
 	if s.PriceTrend < 0 {
@@ -78,8 +70,6 @@ func (s State) SignedTrendStrength() float64 {
 	return st
 }
 
-// defaultAgents is the roster every game ships with, all disabled until the
-// player hands one the company card.
 func defaultAgents() []Agent {
 	return []Agent{
 		{Key: "momentum", Metric: MetricTrend, Cmp: CmpAbove, Threshold: 0.3, Action: ActBuyEggs, Size: 100},
@@ -90,15 +80,12 @@ func defaultAgents() []Agent {
 	}
 }
 
-// AgentEvent records an agent firing so the UI can flash what it just did.
 type AgentEvent struct {
 	Key    string
 	Action AgentAction
 	Size   float64
 }
 
-// RunAgents evaluates every enabled agent against the current state and executes
-// the ones whose trigger holds. Meant to be called on the slow beat.
 func (m *Machine) RunAgents() []AgentEvent {
 	if m.s.Frozen() {
 		return nil
@@ -130,7 +117,6 @@ func (m *Machine) RunAgents() []AgentEvent {
 	return events
 }
 
-// ToggleAgent flips whether the agent at index i is trading.
 func (m *Machine) ToggleAgent(i int) {
 	if i < 0 || i >= len(m.s.Agents) {
 		return
@@ -138,7 +124,6 @@ func (m *Machine) ToggleAgent(i int) {
 	m.s.Agents[i].Enabled = !m.s.Agents[i].Enabled
 }
 
-// SetAgentSize sets the trade/premium size for the agent at index i.
 func (m *Machine) SetAgentSize(i int, size float64) {
 	if i < 0 || i >= len(m.s.Agents) || size <= 0 {
 		return
@@ -146,7 +131,6 @@ func (m *Machine) SetAgentSize(i int, size float64) {
 	m.s.Agents[i].Size = size
 }
 
-// SetAgentThreshold sets the trigger threshold for the agent at index i.
 func (m *Machine) SetAgentThreshold(i int, t float64) {
 	if i < 0 || i >= len(m.s.Agents) {
 		return

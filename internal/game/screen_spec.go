@@ -136,21 +136,22 @@ func (ss *specScreen) view(m *Model) string {
 	if len(s.Positions) > 0 {
 		sections = append(sections, panels.Section{Content: ss.renderPnL(m), Priority: 30})
 	}
+	hints := [][2]string{
+		toggleHint("call/put"),
+		verticalHint("premium"),
+		hint("[ ]/-/+", "leverage"),
+		confirmHint("open"),
+		hint("x", "close"),
+		hint("c", "close all"),
+		hint("pgup/pgdn", "positions"),
+		hint(",/.", "ledger"),
+	}
+	hints = append(hints, m.pageHintPairs()...)
+	hints = append(hints, hint("esc/d/q", "back"))
 	sections = append(sections,
 		panels.Section{Content: renderLedger(m, ss.ledger), Priority: 20},
 		panels.Section{Content: panels.Flash(vk.Fit(m.flash)), Priority: 10},
-		panels.Section{Content: vk.HintLine(
-			[2]string{"←/→", "call/put"},
-			[2]string{"↑/↓", "premium"},
-			[2]string{"[ ]", "leverage"},
-			[2]string{"enter", "open"},
-			[2]string{"x", "close"},
-			[2]string{"c", "close all"},
-			[2]string{"pgup/pgdn", "positions"},
-			[2]string{",/.", "ledger"},
-			[2]string{"ctrl+u/d", "page"},
-			[2]string{"esc", "back"},
-		), Priority: panels.Essential},
+		panels.Section{Content: vk.HintLine(hints...), Priority: panels.Essential},
 	)
 	return panels.StackFit(m.bodyBudget(), sections...)
 }

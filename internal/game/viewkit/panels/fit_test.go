@@ -21,7 +21,7 @@ func TestStackFitNoLimitMatchesStack(t *testing.T) {
 }
 
 func TestStackFitEverythingFits(t *testing.T) {
-	// Three single-line sections stack to 3 + 2 separators = 5 rows.
+
 	secs := []Section{
 		{Content: "alpha", Priority: Essential},
 		{Content: "bravo", Priority: 30},
@@ -44,7 +44,7 @@ func TestStackFitDropsHighestPriorityFirst(t *testing.T) {
 		{Content: "bravo", Priority: 30},
 		{Content: "charlie", Priority: 10},
 	}
-	// Budget 3 forces one drop: alpha + one survivor = 1 + 1 + 1 separator = 3.
+
 	got := StackFit(3, secs...)
 	if h := lipgloss.Height(got); h != 3 {
 		t.Fatalf("height = %d, want 3:\n%s", h, got)
@@ -62,15 +62,12 @@ func TestStackFitTieDropsBottomMost(t *testing.T) {
 		{Content: "top", Priority: 20},
 		{Content: "bottom", Priority: 20},
 	}
-	// Budget 1 leaves room for a single line; the bottom-most tie loses first,
-	// then the remaining tie is dropped too since nothing is essential.
+
 	got := StackFit(1, secs...)
 	if h := lipgloss.Height(got); h != 1 {
 		t.Fatalf("height = %d, want 1:\n%s", h, got)
 	}
 
-	// Budget 3 keeps both (2 + 1 separator); budget 2 forces exactly one drop
-	// and it must be the bottom-most.
 	got = StackFit(2, secs...)
 	if strings.Contains(got, "bottom") || !strings.Contains(got, "top") {
 		t.Errorf("bottom-most section should drop first on a tie:\n%s", got)
@@ -83,7 +80,7 @@ func TestStackFitKeepsEssentialsWhenOverBudget(t *testing.T) {
 		{Content: "drop", Priority: 40},
 		{Content: "keep-2", Priority: Essential},
 	}
-	// Budget 1 can't fit both essentials, but essentials are never dropped.
+
 	got := StackFit(1, secs...)
 	if strings.Contains(got, "drop") {
 		t.Errorf("droppable section should be gone:\n%s", got)
@@ -94,7 +91,7 @@ func TestStackFitKeepsEssentialsWhenOverBudget(t *testing.T) {
 }
 
 func TestStackFitSkipsEmptySections(t *testing.T) {
-	// Empty sections contribute no height and no separator, matching Stack.
+
 	got := StackFit(3, Section{Content: "alpha", Priority: Essential}, Section{Content: "", Priority: 10}, Section{Content: "bravo", Priority: Essential})
 	want := Stack("alpha", "bravo")
 	if got != want {

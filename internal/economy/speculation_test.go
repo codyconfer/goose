@@ -25,12 +25,9 @@ func TestOpenPositionStakesPremium(t *testing.T) {
 	}
 }
 
-func TestOpenPositionRejectsUnaffordableOrJunk(t *testing.T) {
+func TestOpenPositionRejectsJunk(t *testing.T) {
 	m := NewMachine()
 	m.s.Tokens = 50
-	if m.OpenPosition(PosCall, 200, 5, 30) {
-		t.Fatal("should not open a position you can't afford")
-	}
 	if m.OpenPosition("straddle", 10, 5, 30) {
 		t.Fatal("should reject an unknown position kind")
 	}
@@ -39,6 +36,17 @@ func TestOpenPositionRejectsUnaffordableOrJunk(t *testing.T) {
 	}
 	if m.s.Tokens != 50 {
 		t.Fatalf("failed opens should not touch the purse, tokens=%v", m.s.Tokens)
+	}
+}
+
+func TestOpenPositionAllowsCredit(t *testing.T) {
+	m := NewMachine()
+	m.s.Tokens = 50
+	if !m.OpenPosition(PosCall, 200, 5, 30) {
+		t.Fatal("calls should be openable on credit")
+	}
+	if m.s.Tokens != -150 {
+		t.Fatalf("premium should push tokens negative: tokens=%v, want -150", m.s.Tokens)
 	}
 }
 

@@ -160,7 +160,7 @@ func TestPriceReRollsOnlyOnSlowBeat(t *testing.T) {
 }
 
 func TestBaselineYieldAccruesOnlyOnSlowBeat(t *testing.T) {
-	// Fresh state: no producers, no consumers — nothing moves except the baseline.
+
 	m := New(economy.NewMachine(), events.NewMachine(), 0)
 
 	base := time.Unix(1_700_000_000, 0)
@@ -515,9 +515,6 @@ func TestPageScrollRevealsOffscreenPanels(t *testing.T) {
 	next, _ := m.Update(tea.WindowSizeMsg{Width: theme.MinScreenWidth, Height: 18})
 	m = next.(Model)
 
-	// At this height the essential panels alone overflow the viewport, so the
-	// queue starts below the fold while the hint footer stays pinned. (Droppable
-	// panels like the ledger are shed entirely rather than pushed off-screen.)
 	if view := m.View(); strings.Contains(view, "TRADE QUEUE") {
 		t.Fatalf("queue should start below the viewport:\n%s", view)
 	}
@@ -572,7 +569,7 @@ func TestActiveGameRenderAndProducerBuy(t *testing.T) {
 	s.Eggs = 500
 	s.Owned["server"] = 5
 	m := New(economy.FromState(s), events.NewMachine(), 0)
-	m.height = 120 // tall enough that no panels are dropped to fit
+	m.height = 120
 	m.notifs.Push(notify.Notification{Title: "🍀 Test Notification", Message: "hi", Tone: notify.TonePositive}, 5)
 
 	v := m.View()

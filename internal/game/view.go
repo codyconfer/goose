@@ -127,20 +127,33 @@ func (m Model) renderMarket() string {
 
 func (m Model) renderFooter() string {
 	hints := []([2]string){
-		{"enter", "generate"},
-		{"↑/↓", "select"},
-		{"b/→", "buy"},
-		{"s", "sell"},
-		{"B/S", "max queue"},
-		{"t", "trade"},
-		{"a", "agents"},
+		confirmHint("generate"),
+		verticalHint("select"),
+		hint("b/→/l", "buy"),
+		hint("s", "sell"),
+		hint("B/S", "max queue"),
+		hint("t", "trade"),
+		hint("a", "agents"),
 	}
 	if m.econ.Get().Level() >= economy.SpecUnlockLevel {
-		hints = append(hints, [2]string{"O/P", "max options"})
+		hints = append(hints,
+			hint("O/C", "max call"),
+			hint("P", "max put"),
+		)
 	}
-	hints = append(hints, [2]string{"ctrl+u/d", "page"})
-	hints = append(hints, [2]string{"q", "quit"})
+	hints = append(hints, m.pageHintPairs()...)
+	hints = append(hints, hint("esc/q", "quit"))
 	return m.frame().HintLine(hints...)
+}
+
+// pageHintPairs returns the ctrl+u/d page hint only when the current screen's
+// content actually overflows the viewport. The flag is measured in
+// clampPageScroll, so the legend never advertises paging that would be a no-op.
+func (m Model) pageHintPairs() [][2]string {
+	if m.scrollable {
+		return [][2]string{{"ctrl+u/d", "page"}}
+	}
+	return nil
 }
 
 func (m Model) renderNotification() string {
@@ -283,14 +296,17 @@ func (m *Model) clampPageScroll() {
 	rows := m.scrollableRows(body)
 	if rows <= 0 || !panels.FitsScreenWidth(m.width) {
 		m.pageScroll = 0
+		m.scrollable = false
 		return
 	}
 
 	total := countLines(m.scrollableBody(body))
 	if total <= rows {
 		m.pageScroll = 0
+		m.scrollable = false
 		return
 	}
+	m.scrollable = true
 
 	page := rows - 1
 	if page < 1 {

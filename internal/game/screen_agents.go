@@ -130,18 +130,19 @@ func (as *agentsScreen) view(m *Model) string {
 	vk := m.frame()
 	agents := m.econ.Get().Agents
 
+	hints := [][2]string{
+		verticalHint("select"),
+		confirmHint("hire/bench"),
+		horizontalHint("size"),
+		hint("[ ]/-/+", "threshold"),
+	}
+	hints = append(hints, m.pageHintPairs()...)
+	hints = append(hints, hint("esc/a/q", "back"))
 	sections := []string{
 		vk.Header(content.Text.Agents.DeskTitle, content.Text.Agents.Subtitle),
 		as.renderRoster(m, agents),
 		panels.Flash(vk.Fit(m.flash)),
-		vk.HintLine(
-			[2]string{"↑/↓", "select"},
-			[2]string{"enter", "hire/bench"},
-			[2]string{"←/→", "size"},
-			[2]string{"[ ]", "threshold"},
-			[2]string{"ctrl+u/d", "page"},
-			[2]string{"esc", "back"},
-		),
+		vk.HintLine(hints...),
 	}
 	return panels.Stack(sections...)
 }

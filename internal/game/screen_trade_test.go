@@ -202,7 +202,7 @@ func TestPriceChartInView(t *testing.T) {
 		t.Fatalf("expected the chart to accumulate candles, got %d", len(m.candles))
 	}
 	m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
-	m.height = 120 // tall enough that no panels are dropped to fit
+	m.height = 120
 	if v := m.View(); !strings.Contains(v, "EGG PRICE") {
 		t.Error("trade desk view missing the egg price chart")
 	}

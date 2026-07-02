@@ -78,10 +78,9 @@ func (cs *characterScreen) view(m *Model) string {
 	if cs.notification != nil {
 		b.WriteString(notificationCard(cs.notification.Title, cs.notification.Message, cs.notification.Tone, vk.Width))
 		b.WriteString("\n\n")
-		b.WriteString(vk.HintLine(
-			[2]string{"enter", content.Text.Character.BackHint},
-			[2]string{"ctrl+u/d", "page"},
-		))
+		hints := [][2]string{hint("enter/space/esc/q", content.Text.Character.BackHint)}
+		hints = append(hints, m.pageHintPairs()...)
+		b.WriteString(vk.HintLine(hints...))
 		return b.String()
 	}
 
@@ -94,10 +93,8 @@ func (cs *characterScreen) view(m *Model) string {
 		}
 	}
 	b.WriteString("\n")
-	b.WriteString(vk.HintLine(
-		[2]string{"↑/↓", "weigh options"},
-		[2]string{"enter", "decide"},
-		[2]string{"ctrl+u/d", "page"},
-	))
+	hints := [][2]string{verticalHint("weigh options"), confirmHint("decide")}
+	hints = append(hints, m.pageHintPairs()...)
+	b.WriteString(vk.HintLine(hints...))
 	return b.String()
 }
