@@ -30,9 +30,7 @@ func (m *Machine) earn(n float64) {
 }
 
 func (m *Machine) spend(n float64) {
-	if m.s.Tokens -= n; m.s.Tokens < 0 {
-		m.s.Tokens = 0
-	}
+	m.s.Tokens -= n
 }
 
 func (m *Machine) gainEggs(n float64) {
@@ -48,6 +46,14 @@ func (m *Machine) layEggs(n float64) {
 	}
 	m.s.EggsLaid += n
 	m.gainEggs(n)
+}
+
+func (m *Machine) BaselineYield() {
+	if m.s.Frozen() {
+		return
+	}
+	m.earn(baselineTokens)
+	m.layEggs(baselineEggs)
 }
 
 func (m *Machine) Produce(dt float64) {

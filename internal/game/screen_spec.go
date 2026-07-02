@@ -22,10 +22,9 @@ type specScreen struct {
 	kind        economy.PosKind
 	premiumIdx  int
 	leverageIdx int
+	positions   panels.ScrollState
 	ledger      panels.ScrollState
 }
-
-const positionRows = 8
 
 func (ss *specScreen) simulates() bool { return true }
 
@@ -57,9 +56,13 @@ func (ss *specScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		} else {
 			m.setFlash(content.Text.Spec.NothingToClose)
 		}
-	case "pgup", ",":
+	case "pgup":
+		ss.positions.Scroll(-positionRows, len(m.econ.Get().Positions), positionRows)
+	case "pgdown":
+		ss.positions.Scroll(positionRows, len(m.econ.Get().Positions), positionRows)
+	case ",":
 		ss.ledger.Scroll(-ledgerRows, len(m.econ.Get().Ledger), ledgerRows)
-	case "pgdown", ".":
+	case ".":
 		ss.ledger.Scroll(ledgerRows, len(m.econ.Get().Ledger), ledgerRows)
 	}
 	return nil
@@ -106,7 +109,7 @@ func (ss *specScreen) open(m *Model) {
 }
 
 func (ss *specScreen) close(m *Model) {
-	if res, ok := m.econ.ClosePosition(0); ok {
+	if res, ok := m.econ.ClosePosition(ss.positions.Offset); ok {
 		m.setFlash(fmt.Sprintf(content.Text.Spec.ClosedFmt, res.Pos.Desc(), economy.FormatNum(res.Payout)))
 	} else {
 		m.setFlash(content.Text.Spec.NothingToClose)
@@ -123,30 +126,34 @@ func (ss *specScreen) view(m *Model) string {
 		vk.Row(content.Text.Spec.TrendLabel, tradeTrendLabel(s)),
 	)
 
-	sections := []string{
-		vk.Header(content.Text.Spec.DeskTitle),
-		purse,
-		renderBook(m),
-		ss.renderTicket(m),
-		ss.renderPositions(m),
+	sections := []panels.Section{
+		{Content: vk.Header(content.Text.Spec.DeskTitle), Priority: panels.Essential},
+		{Content: purse, Priority: panels.Essential},
+		{Content: renderBook(m), Priority: 40},
+		{Content: ss.renderTicket(m), Priority: panels.Essential},
+		{Content: ss.renderPositions(m), Priority: panels.Essential},
 	}
 	if len(s.Positions) > 0 {
-		sections = append(sections, renderPnL(m))
+		sections = append(sections, panels.Section{Content: ss.renderPnL(m), Priority: 30})
 	}
+	hints := [][2]string{
+		toggleHint("call/put"),
+		verticalHint("premium"),
+		hint("[ ]/-/+", "leverage"),
+		confirmHint("open"),
+		hint("x", "close"),
+		hint("c", "close all"),
+		hint("pgup/pgdn", "positions"),
+		hint(",/.", "ledger"),
+	}
+	hints = append(hints, m.pageHintPairs()...)
+	hints = append(hints, hint("esc/d/q", "back"))
 	sections = append(sections,
-		renderLedger(m, ss.ledger),
-		panels.Flash(vk.Fit(m.flash)),
-		vk.HintLine(
-			[2]string{"←/→", "call/put"},
-			[2]string{"↑/↓", "premium"},
-			[2]string{"[ ]", "leverage"},
-			[2]string{"enter", "open"},
-			[2]string{"x", "close"},
-			[2]string{"c", "close all"},
-			[2]string{"pgup/pgdn", "ledger"},
-			[2]string{"esc", "back"},
-		))
-	return panels.Stack(sections...)
+		panels.Section{Content: renderLedger(m, ss.ledger), Priority: 20},
+		panels.Section{Content: panels.Flash(vk.Fit(m.flash)), Priority: 10},
+		panels.Section{Content: vk.HintLine(hints...), Priority: panels.Essential},
+	)
+	return panels.StackFit(m.bodyBudget(), sections...)
 }
 
 func (ss *specScreen) renderTicket(m *Model) string {
@@ -203,7 +210,7 @@ func (ss *specScreen) renderPositions(m *Model) string {
 	price := s.EggPrice()
 	var lines []string
 	for i, p := range s.Positions {
-		marker := panels.Cursor(i == 0)
+		marker := panels.Cursor(i == ss.positions.Offset)
 		desc := fmt.Sprintf(content.Text.Spec.PosDescFmt, fmt.Sprintf("%.0fx", p.Leverage), specWord(p.Kind), economy.FormatNum(p.Strike))
 
 		pnl := p.PnL(price)
@@ -230,7 +237,7 @@ func (ss *specScreen) renderPositions(m *Model) string {
 		left := marker + theme.ValSty.Render(desc) + "  " + mark
 		lines = append(lines, vk.Spread(left, bar+" "+clock))
 	}
-	return vk.ScrollPanel(content.Text.Spec.PositionsPanel, lines, positionRows, 0)
+	return vk.ScrollPanel(content.Text.Spec.PositionsPanel, lines, positionRows, ss.positions.Offset)
 }
 
 func renderBook(m *Model) string {
@@ -244,7 +251,7 @@ func renderBook(m *Model) string {
 	return vk.Pie(content.Text.Spec.MixPanel, data, 48, economy.FormatNum, content.Text.Spec.MixEmpty)
 }
 
-func renderPnL(m *Model) string {
+func (ss *specScreen) renderPnL(m *Model) string {
 	vk := m.frame()
 	s := m.econ.Get()
 	price := s.EggPrice()
@@ -253,7 +260,7 @@ func renderPnL(m *Model) string {
 		desc := fmt.Sprintf("%.0fx %s", p.Leverage, specWord(p.Kind))
 		data[i] = panels.Datum{Label: desc, Value: p.PnL(price)}
 	}
-	return vk.Bar(content.Text.Spec.PnlPanel, data, meterWidth(vk.Width, 40), economy.FormatNum, content.Text.Spec.PositionsEmpty)
+	return vk.BarScroll(content.Text.Spec.PnlPanel, data, meterWidth(vk.Width, 40), economy.FormatNum, content.Text.Spec.PositionsEmpty, pnlRows, ss.positions.Offset)
 }
 
 func specWord(k economy.PosKind) string {

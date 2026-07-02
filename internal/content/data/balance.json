@@ -1,6 +1,9 @@
 {
   "cost_growth": 1.15,
 
+  "baseline_tokens": 1,
+  "baseline_eggs": 1,
+
   "base_price": 2.5,
   "consumer_appetite": 0.5,
   "crowd_headroom": 0.6,

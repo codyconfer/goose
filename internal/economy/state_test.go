@@ -61,6 +61,30 @@ func TestCannotOverspend(t *testing.T) {
 	}
 }
 
+func TestSpendGoesNegative(t *testing.T) {
+	m := NewMachine()
+	m.s.Tokens = 10
+	m.spend(30)
+	if m.s.Tokens != -20 {
+		t.Fatalf("tokens=%v, want -20", m.s.Tokens)
+	}
+}
+
+func TestPurchasesGatedWhenNegative(t *testing.T) {
+	m := NewMachine()
+	m.s.Tokens = -100
+	if m.BuyProducer(Producers[0]) {
+		t.Fatal("bought a nest while in debt")
+	}
+	click, _ := UpgradeByKey(UpgradeClick)
+	if m.BuyUpgrade(click) {
+		t.Fatal("bought an upgrade while in debt")
+	}
+	if m.s.Owned[Producers[0].Key] != 0 || m.s.UpgradeLevel(UpgradeClick) != 0 {
+		t.Fatalf("state mutated by rejected purchases: %+v / %d", m.s.Owned, m.s.UpgradeLevel(UpgradeClick))
+	}
+}
+
 func TestProduceMakesEggs(t *testing.T) {
 	m := NewMachine()
 	m.s.Tokens = 1000

@@ -357,10 +357,9 @@ func evalExpr(expr Expr, env evalEnv) float64 {
 		if len(expr.Args) == 0 {
 			return 0
 		}
+		// Outcome costs are allowed to exceed the balance and push tokens
+		// negative; we only guard against a negative charge.
 		cost := evalExpr(expr.Args[0], env)
-		if cost > env.state.Tokens {
-			return env.state.Tokens
-		}
 		if cost < 0 {
 			return 0
 		}

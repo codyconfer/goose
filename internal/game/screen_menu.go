@@ -225,24 +225,32 @@ func (ms *menuScreen) view(m *Model) string {
 	b.WriteString("\n")
 	switch ms.mode {
 	case menuModeRename:
-		b.WriteString(vk.HintLine(
-			[2]string{"enter", "save"},
-			[2]string{"esc", "cancel"},
-		))
+		hints := [][2]string{
+			hint("type", "rename"),
+			hint("backspace", "erase"),
+			hint("enter", "save"),
+			hint("esc", "cancel"),
+		}
+		hints = append(hints, m.pageHintPairs()...)
+		b.WriteString(vk.HintLine(hints...))
 	case menuModeDelete:
-		b.WriteString(vk.HintLine(
-			[2]string{"y", "delete"},
-			[2]string{"n", "cancel"},
-		))
+		hints := [][2]string{
+			hint("y", "delete"),
+			hint("n/esc/q", "cancel"),
+		}
+		hints = append(hints, m.pageHintPairs()...)
+		b.WriteString(vk.HintLine(hints...))
 	default:
-		b.WriteString(vk.HintLine(
-			[2]string{"↑/↓", "select"},
-			[2]string{"enter", "choose"},
-			[2]string{"n", "new"},
-			[2]string{"r", "rename"},
-			[2]string{"x", "delete"},
-			[2]string{"q", "quit"},
-		))
+		hints := [][2]string{
+			verticalHint("select"),
+			confirmHint("choose"),
+			hint("n", "new"),
+			hint("r", "rename"),
+			hint("x/d", "delete"),
+		}
+		hints = append(hints, m.pageHintPairs()...)
+		hints = append(hints, hint("esc/q", "quit"))
+		b.WriteString(vk.HintLine(hints...))
 	}
 	return b.String()
 }

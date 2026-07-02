@@ -101,9 +101,10 @@ func (m *Machine) OpenPosition(kind PosKind, premium, leverage, expiry float64) 
 		return false
 	}
 	price := m.s.EggPrice()
-	if price <= 0 || premium > m.s.Tokens {
+	if price <= 0 {
 		return false
 	}
+	// Calls and puts may be opened on credit — the premium can push tokens negative.
 	m.s.Tokens -= premium
 	p := Position{Kind: kind, Strike: price, Premium: premium, Leverage: leverage, Expiry: expiry}
 	m.s.Positions = append(m.s.Positions, p)

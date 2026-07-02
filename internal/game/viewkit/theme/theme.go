@@ -6,6 +6,13 @@ const (
 	BodyWidth    = 81
 	MinBodyWidth = 24
 
+	MinScreenWidth     = 80
+	MinBodyHeight      = 35
+	AppMarginY         = 1
+	AppMarginX         = 2
+	ScreenPaddingWidth = AppMarginX*2 + 4
+	MinScreenBodyWidth = MinScreenWidth - ScreenPaddingWidth
+
 	RuleWidth = BodyWidth + 4
 )
 
@@ -26,7 +33,7 @@ var (
 	CanSty   = lipgloss.NewStyle().Foreground(gn)
 	CantSty  = lipgloss.NewStyle().Foreground(rd)
 
-	AppFrame = lipgloss.NewStyle().Margin(1, 2)
+	AppFrame = lipgloss.NewStyle().Margin(AppMarginY, AppMarginX)
 
 	PanelSty      = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(dim).Padding(0, 1).Width(BodyWidth + 2)
 	PanelTitleSty = lipgloss.NewStyle().Bold(true).Foreground(gold)

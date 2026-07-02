@@ -128,6 +128,35 @@ func TestTradeDeskShowsLedger(t *testing.T) {
 	}
 }
 
+func TestTradeDeskQueueScrollsAndCancelsVisibleOrder(t *testing.T) {
+	s := economy.NewState()
+	s.Tokens = 100000
+	econ := economy.FromState(s)
+	for i := 1; i <= 12; i++ {
+		econ.ScheduleTrade(economy.TxBuyEggs, float64(i*10))
+	}
+
+	m := New(econ, events.NewMachine(), 0)
+	m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
+	m = send(m, key("pgdown"))
+
+	ts := m.screen.(*tradeScreen)
+	if ts.queue.Offset == 0 {
+		t.Fatal("queue page-down did not advance the scroll offset")
+	}
+	if got := m.View(); !strings.Contains(got, "5–12 of 12") {
+		t.Fatalf("queue footer missing scrolled range:\n%s", got)
+	}
+
+	m = send(m, key("x"))
+	if len(m.econ.Get().Transactions) != 11 {
+		t.Fatalf("queue len=%d, want 11 after cancel", len(m.econ.Get().Transactions))
+	}
+	if got := m.econ.Get().Transactions[4].Amount; got != 60 {
+		t.Fatalf("visible cancel removed wrong order, amount at index 4=%v, want 60", got)
+	}
+}
+
 func TestLedgerDescriptionsUseAssetIcons(t *testing.T) {
 	producer := economy.Producers[0]
 	producerRow := ledgerDesc(economy.Transaction{Kind: economy.TxBuyProducer, Label: producer.Name})
@@ -173,6 +202,7 @@ func TestPriceChartInView(t *testing.T) {
 		t.Fatalf("expected the chart to accumulate candles, got %d", len(m.candles))
 	}
 	m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
+	m.height = 120
 	if v := m.View(); !strings.Contains(v, "EGG PRICE") {
 		t.Error("trade desk view missing the egg price chart")
 	}

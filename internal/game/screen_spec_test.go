@@ -120,3 +120,34 @@ func TestSpecDeskSimulates(t *testing.T) {
 		t.Error("derivatives desk should keep the heartbeat running")
 	}
 }
+
+func TestSpecDeskScrollsPositionsAndClosesVisibleEntry(t *testing.T) {
+	s := leveledState()
+	s.Tokens = 1000000
+	econ := economy.FromState(s)
+	for i := 1; i <= 12; i++ {
+		if !econ.OpenPosition(economy.PosCall, float64(i*10), 2, 60) {
+			t.Fatalf("failed to open position %d", i)
+		}
+	}
+
+	m := New(econ, events.NewMachine(), 0)
+	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
+	m = send(m, key("pgdown"))
+
+	ss := m.screen.(*specScreen)
+	if ss.positions.Offset == 0 {
+		t.Fatal("positions page-down did not advance the scroll offset")
+	}
+	if got := m.View(); !strings.Contains(got, "5–12 of 12") {
+		t.Fatalf("positions footer missing scrolled range:\n%s", got)
+	}
+
+	m = send(m, key("x"))
+	if len(m.econ.Get().Positions) != 11 {
+		t.Fatalf("positions len=%d, want 11 after close", len(m.econ.Get().Positions))
+	}
+	if got := m.econ.Get().Positions[4].Premium; got != 60 {
+		t.Fatalf("visible close removed wrong position, premium at index 4=%v, want 60", got)
+	}
+}

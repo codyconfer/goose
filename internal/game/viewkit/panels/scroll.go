@@ -2,6 +2,7 @@ package panels
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 )
@@ -12,6 +13,18 @@ type ScrollState struct {
 
 func (s *ScrollState) Scroll(delta, total, rows int) {
 	s.Offset += delta
+	s.clamp(total, rows)
+}
+
+func (s *ScrollState) Reveal(index, total, rows int) {
+	if rows < 1 {
+		rows = 1
+	}
+	if index < s.Offset {
+		s.Offset = index
+	} else if index >= s.Offset+rows {
+		s.Offset = index - rows + 1
+	}
 	s.clamp(total, rows)
 }
 
@@ -52,12 +65,40 @@ func ScrollPanel(title string, lines []string, rows, offset int) string {
 }
 
 func (f Frame) ScrollPanel(title string, lines []string, rows, offset int) string {
-	window, footer, ok := scrollWindow(lines, rows, offset)
-	if !ok {
-		return f.Panel(title, window...)
+	return f.ScrollPanelWithPrefix(title, nil, lines, rows, offset)
+}
+
+func (f Frame) ScrollPanelWithPrefix(title string, prefix, lines []string, rows, offset int) string {
+	if len(lines) == 0 {
+		return f.Panel(title, prefix...)
 	}
+	window, footer, ok := scrollWindow(lines, rows, offset)
+	out := make([]string, 0, len(prefix)+len(window)+1)
+	out = append(out, prefix...)
+	out = append(out, window...)
+	if ok {
+		out = append(out, theme.DimSty.Render(footer))
+	}
+	return f.Panel(title, out...)
+}
+
+func Viewport(body string, rows, offset int) string {
+	lines := strings.Split(body, "\n")
+	if rows < 1 {
+		return ""
+	}
+	if len(lines) <= rows {
+		return body
+	}
+	if rows == 1 {
+		_, footer, _ := scrollWindow(lines, 1, offset)
+		return theme.DimSty.Render(footer)
+	}
+
+	windowRows := rows - 1
+	window, footer, _ := scrollWindow(lines, windowRows, offset)
 	out := make([]string, 0, len(window)+1)
 	out = append(out, window...)
 	out = append(out, theme.DimSty.Render(footer))
-	return f.Panel(title, out...)
+	return strings.Join(out, "\n")
 }

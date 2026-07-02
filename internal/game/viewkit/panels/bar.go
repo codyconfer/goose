@@ -18,8 +18,24 @@ func Bar(title string, data []Datum, width int, fmtNum func(float64) string, emp
 }
 
 func (f Frame) Bar(title string, data []Datum, width int, fmtNum func(float64) string, empty string) string {
-	if len(data) == 0 {
+	lines, ok := f.barLines(data, width, fmtNum)
+	if !ok {
 		return f.Panel(title, theme.DimSty.Render(empty))
+	}
+	return f.Panel(title, lines...)
+}
+
+func (f Frame) BarScroll(title string, data []Datum, width int, fmtNum func(float64) string, empty string, visible, offset int) string {
+	lines, ok := f.barLines(data, width, fmtNum)
+	if !ok {
+		return f.Panel(title, theme.DimSty.Render(empty))
+	}
+	return f.ScrollPanel(title, lines, visible, offset)
+}
+
+func (f Frame) barLines(data []Datum, width int, fmtNum func(float64) string) ([]string, bool) {
+	if len(data) == 0 {
+		return nil, false
 	}
 	if width < 1 {
 		width = 1
@@ -57,7 +73,7 @@ func (f Frame) Bar(title string, data []Datum, width int, fmtNum func(float64) s
 		bar := sty.Render(strings.Repeat("█", n))
 		lines[i] = f.Spread(label+" "+bar, sty.Render(fmtNum(d.Value)))
 	}
-	return f.Panel(title, lines...)
+	return lines, true
 }
 
 func absf(v float64) float64 {

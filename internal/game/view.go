@@ -3,7 +3,9 @@ package game
 import (
 	"fmt"
 	"math"
+	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/codyconfer/goose/internal/content"
@@ -17,14 +19,14 @@ func (m Model) View() string {
 	if m.quitting {
 		return theme.AppFrame.Render(theme.TitleSty.Render(content.Text.App.Quit))
 	}
-	return theme.AppFrame.Render(m.screen.view(&m))
+	if !panels.FitsScreenWidth(m.width) {
+		return theme.AppFrame.Render(panels.TooNarrow(m.width))
+	}
+	return theme.AppFrame.Render(m.layoutViewport(m.screen.view(&m)))
 }
 
 func (m Model) frame() panels.Frame {
-	if m.width <= 0 {
-		return panels.DefaultFrame()
-	}
-	return panels.NewFrame(m.width - 8)
+	return panels.ScreenFrame(m.width)
 }
 
 func (m Model) renderTitleBar() string {
@@ -125,18 +127,33 @@ func (m Model) renderMarket() string {
 
 func (m Model) renderFooter() string {
 	hints := []([2]string){
-		{"enter", "generate"},
-		{"↑/↓", "select"},
-		{"b/→", "buy"},
-		{"s", "sell"},
-		{"B/S", "max queue"},
-		{"t", "trade"},
+		confirmHint("generate"),
+		verticalHint("select"),
+		hint("b/→/l", "buy"),
+		hint("s", "sell"),
+		hint("B/S", "max queue"),
+		hint("t", "trade"),
+		hint("a", "agents"),
 	}
 	if m.econ.Get().Level() >= economy.SpecUnlockLevel {
-		hints = append(hints, [2]string{"O/P", "max options"})
+		hints = append(hints,
+			hint("O/C", "max call"),
+			hint("P", "max put"),
+		)
 	}
-	hints = append(hints, [2]string{"q", "quit"})
+	hints = append(hints, m.pageHintPairs()...)
+	hints = append(hints, hint("esc/q", "quit"))
 	return m.frame().HintLine(hints...)
+}
+
+// pageHintPairs returns the ctrl+u/d page hint only when the current screen's
+// content actually overflows the viewport. The flag is measured in
+// clampPageScroll, so the legend never advertises paging that would be a no-op.
+func (m Model) pageHintPairs() [][2]string {
+	if m.scrollable {
+		return [][2]string{{"ctrl+u/d", "page"}}
+	}
+	return nil
 }
 
 func (m Model) renderNotification() string {
@@ -176,4 +193,206 @@ func meterWidth(frameWidth, desired int) int {
 		return max
 	}
 	return desired
+}
+
+func (m Model) viewportRows() int {
+	if m.height <= 0 {
+		return 0
+	}
+	rows := m.height - theme.AppMarginY*2
+	if rows < 1 {
+		return 1
+	}
+	return rows
+}
+
+// bodyBudget is the row budget a screen should fit its panels into. Unlike
+// viewportRows it falls back to the minimum supported height when the terminal
+// size is not yet known, so the first frame targets the design minimum rather
+// than dumping every panel.
+func (m Model) bodyBudget() int {
+	if m.height <= 0 {
+		return theme.MinBodyHeight - theme.AppMarginY*2
+	}
+	rows := m.height - theme.AppMarginY*2
+	if rows < 1 {
+		rows = 1
+	}
+	return rows
+}
+
+func (m Model) layoutViewport(body string) string {
+	rows := m.viewportRows()
+	if rows <= 0 {
+		return body
+	}
+
+	content, footer := splitStickyFooter(body)
+	if footer == "" {
+		return panels.Viewport(body, rows, m.pageScroll)
+	}
+
+	footerRows := countLines(footer)
+	if footerRows >= rows {
+		return panels.Viewport(footer, rows, 0)
+	}
+
+	contentRows := rows - footerRows
+	separator := ""
+	if content != "" && contentRows > 0 {
+		contentRows--
+		separator = "\n\n"
+	}
+
+	contentView := ""
+	if contentRows > 0 && content != "" {
+		contentView = panels.Viewport(content, contentRows, m.pageScroll)
+		contentView = padLines(contentView, contentRows)
+	}
+
+	switch {
+	case contentView == "":
+		return padLines("", rows-footerRows) + footer
+	case separator == "":
+		return contentView + footer
+	default:
+		return contentView + separator + footer
+	}
+}
+
+func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
+	body := m.screen.view(m)
+	rows := m.scrollableRows(body)
+	if rows <= 0 || !panels.FitsScreenWidth(m.width) {
+		return false
+	}
+
+	total := countLines(m.scrollableBody(body))
+	if total <= rows {
+		m.pageScroll = 0
+		return false
+	}
+
+	page := rows - 1
+	if page < 1 {
+		page = 1
+	}
+
+	s := panels.ScrollState{Offset: m.pageScroll}
+	switch msg.String() {
+	case "ctrl+d":
+		s.Scroll(page, total, page)
+	case "ctrl+u":
+		s.Scroll(-page, total, page)
+	default:
+		return false
+	}
+	m.pageScroll = s.Offset
+	return true
+}
+
+func (m *Model) clampPageScroll() {
+	body := m.screen.view(m)
+	rows := m.scrollableRows(body)
+	if rows <= 0 || !panels.FitsScreenWidth(m.width) {
+		m.pageScroll = 0
+		m.scrollable = false
+		return
+	}
+
+	total := countLines(m.scrollableBody(body))
+	if total <= rows {
+		m.pageScroll = 0
+		m.scrollable = false
+		return
+	}
+	m.scrollable = true
+
+	page := rows - 1
+	if page < 1 {
+		page = 1
+	}
+
+	s := panels.ScrollState{Offset: m.pageScroll}
+	s.Scroll(0, total, page)
+	m.pageScroll = s.Offset
+}
+
+func (m Model) scrollableBody(body string) string {
+	content, footer := splitStickyFooter(body)
+	if footer == "" {
+		return body
+	}
+
+	if m.scrollableRows(body) < 1 {
+		return ""
+	}
+	return content
+}
+
+func (m Model) scrollableRows(body string) int {
+	rows := m.viewportRows()
+	if rows <= 0 {
+		return 0
+	}
+
+	content, footer := splitStickyFooter(body)
+	if footer == "" {
+		return rows
+	}
+
+	footerRows := countLines(footer)
+	if footerRows >= rows {
+		return 0
+	}
+
+	contentRows := rows - footerRows
+	if content != "" && contentRows > 0 {
+		contentRows--
+	}
+	return max(contentRows, 0)
+}
+
+func countLines(s string) int {
+	lines := 0
+	for range strings.SplitSeq(s, "\n") {
+		lines++
+	}
+	if lines == 0 {
+		return 1
+	}
+	return lines
+}
+
+func splitStickyFooter(body string) (content, footer string) {
+	idx := strings.LastIndex(body, "\n\n")
+	if idx < 0 {
+		return body, ""
+	}
+	return body[:idx], body[idx+2:]
+}
+
+func padLines(body string, rows int) string {
+	if rows <= 0 {
+		return ""
+	}
+	if body == "" {
+		return strings.Repeat("\n", max(rows-1, 0))
+	}
+
+	lines := countLines(body)
+	if lines >= rows {
+		return body
+	}
+
+	var b strings.Builder
+	if body != "" {
+		b.WriteString(body)
+	}
+	for i := lines; i < rows; i++ {
+		if b.Len() > 0 {
+			b.WriteByte('\n')
+		}
+	}
+	return b.String()
 }

@@ -45,6 +45,19 @@ func TestScrollStateScrollStopsAtEnds(t *testing.T) {
 	}
 }
 
+func TestScrollStateRevealKeepsSelectionVisible(t *testing.T) {
+	s := ScrollState{}
+	s.Reveal(9, 20, 8)
+	if s.Offset != 2 {
+		t.Fatalf("reveal offset=%d, want 2", s.Offset)
+	}
+
+	s.Reveal(1, 20, 8)
+	if s.Offset != 1 {
+		t.Fatalf("reveal back up offset=%d, want 1", s.Offset)
+	}
+}
+
 func TestScrollWindowNoFooterWhenFits(t *testing.T) {
 	lines := []string{"a", "b", "c"}
 	win, footer, ok := scrollWindow(lines, 8, 0)
@@ -82,5 +95,24 @@ func TestScrollPanelIncludesFooterLine(t *testing.T) {
 	out := ScrollPanel("History", lines, 8, 4)
 	if !strings.Contains(out, "5–12 of 20") {
 		t.Fatalf("panel missing position footer:\n%s", out)
+	}
+}
+
+func TestViewportFitsRequestedRows(t *testing.T) {
+	body := strings.Join([]string{
+		"one",
+		"two",
+		"three",
+		"four",
+		"five",
+	}, "\n")
+
+	out := Viewport(body, 4, 1)
+	lines := strings.Split(out, "\n")
+	if len(lines) != 4 {
+		t.Fatalf("viewport lines=%d, want 4", len(lines))
+	}
+	if !strings.Contains(out, "2–4 of 5") {
+		t.Fatalf("viewport missing footer:\n%s", out)
 	}
 }

@@ -166,12 +166,19 @@ func (ss *settingsScreen) view(m *Model) string {
 	if m.flash != "" {
 		b.WriteString(panels.Flash(vk.Fit(m.flash)) + "\n\n")
 	}
-	b.WriteString(vk.HintLine(
-		[2]string{"↑/↓", "setting"},
-		[2]string{"←/→", "change"},
-		[2]string{"r", "reroll seed"},
-		[2]string{"enter", "hatch flock"},
-		[2]string{"esc", "back"},
-	))
+	hints := [][2]string{verticalHint("setting")}
+	if seedSelected {
+		hints = append(hints,
+			hint("digits/-", "seed"),
+			hint("backspace", "erase"),
+			hint("r", "reroll seed"),
+		)
+	} else {
+		hints = append(hints, horizontalHint("change"))
+	}
+	hints = append(hints, confirmHint("hatch flock"))
+	hints = append(hints, m.pageHintPairs()...)
+	hints = append(hints, hint("esc/q", "back"))
+	b.WriteString(vk.HintLine(hints...))
 	return b.String()
 }
