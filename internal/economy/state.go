@@ -17,6 +17,7 @@ type State struct {
 	PriceTrend       float64        `json:"price_trend,omitempty"`
 	Transactions     []Transaction  `json:"transactions,omitempty"`
 	Positions        []Position     `json:"positions,omitempty"`
+	Agents           []Agent        `json:"agents,omitempty"`
 	Ledger           []Transaction  `json:"ledger,omitempty"`
 	PriceCandles     []PriceCandle  `json:"price_candles,omitempty"`
 	PriceCandleBeats int            `json:"price_candle_beats,omitempty"`
@@ -34,6 +35,7 @@ func NewState() State {
 		PriceFactor:   1,
 		Owned:         map[string]int{},
 		UpgradeLevels: map[string]int{},
+		Agents:        defaultAgents(),
 	}
 }
 
@@ -48,6 +50,9 @@ func (s State) clone() State {
 	}
 	if s.Positions != nil {
 		out.Positions = append([]Position(nil), s.Positions...)
+	}
+	if s.Agents != nil {
+		out.Agents = append([]Agent(nil), s.Agents...)
 	}
 	if s.Ledger != nil {
 		out.Ledger = append([]Transaction(nil), s.Ledger...)
@@ -66,6 +71,9 @@ func Normalize(s *State) {
 	}
 	if s.UpgradeLevels == nil {
 		s.UpgradeLevels = map[string]int{}
+	}
+	if s.Agents == nil {
+		s.Agents = defaultAgents()
 	}
 	if s.PerClick <= 0 {
 		s.PerClick = 1

@@ -32,6 +32,9 @@ type Upgrade struct {
 type balanceData struct {
 	CostGrowth float64 `json:"cost_growth"`
 
+	BaselineTokens float64 `json:"baseline_tokens"`
+	BaselineEggs   float64 `json:"baseline_eggs"`
+
 	BasePrice        float64 `json:"base_price"`
 	ConsumerAppetite float64 `json:"consumer_appetite"`
 	CrowdHeadroom    float64 `json:"crowd_headroom"`
@@ -253,6 +256,32 @@ type textData struct {
 		Prompt   string `json:"prompt"`
 		BackHint string `json:"back_hint"`
 	} `json:"character"`
+	Agents struct {
+		DeskTitle string `json:"desk_title"`
+		Subtitle  string `json:"subtitle"`
+		Panel     string `json:"panel"`
+		Empty     string `json:"empty"`
+		FiredFmt  string `json:"fired_fmt"`
+		RuleFmt   string `json:"rule_fmt"`
+		OnWord    string `json:"on_word"`
+		OffWord   string `json:"off_word"`
+
+		MetricTrend  string `json:"metric_trend"`
+		MetricPrice  string `json:"metric_price"`
+		MetricTokens string `json:"metric_tokens"`
+		MetricEggs   string `json:"metric_eggs"`
+		CmpAbove     string `json:"cmp_above"`
+		CmpBelow     string `json:"cmp_below"`
+		ActBuyEggs   string `json:"act_buy_eggs"`
+		ActSellEggs  string `json:"act_sell_eggs"`
+		ActOpenCall  string `json:"act_open_call"`
+		ActOpenPut   string `json:"act_open_put"`
+
+		Roster map[string]struct {
+			Name  string `json:"name"`
+			Blurb string `json:"blurb"`
+		} `json:"roster"`
+	} `json:"agents"`
 }
 
 var (

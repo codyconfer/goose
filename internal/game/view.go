@@ -133,6 +133,7 @@ func (m Model) renderFooter() string {
 		{"s", "sell"},
 		{"B/S", "max queue"},
 		{"t", "trade"},
+		{"a", "agents"},
 	}
 	if m.econ.Get().Level() >= economy.SpecUnlockLevel {
 		hints = append(hints, [2]string{"O/P", "max options"})

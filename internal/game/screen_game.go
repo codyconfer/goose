@@ -49,6 +49,8 @@ func (gs *gameScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		gs.openMaxPosition(m, economy.PosPut)
 	case "t":
 		m.screen = &tradeScreen{prev: gs, kind: economy.TxBuyEggs}
+	case "a":
+		m.screen = &agentsScreen{prev: gs}
 	}
 	return nil
 }

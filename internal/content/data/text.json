@@ -146,5 +146,47 @@
   "character": {
     "prompt": "How do you respond?",
     "back_hint": "back to the grind"
+  },
+  "agents": {
+    "desk_title": "AGENT DESK  ·  hand the geese your card and go touch grass",
+    "subtitle": "autonomous AI agents trade your book on every slow beat — what could possibly go wrong",
+    "panel": "AGENT ROSTER  ·  enable one, then don't watch",
+    "empty": "no agents on payroll — you're still doing this by hand like a chump",
+    "fired_fmt": "🤖 %s just moved your money. It says trust the process.",
+    "rule_fmt": "when %s %s %s → %s",
+    "on_word": "ON THE CARD",
+    "off_word": "benched",
+    "metric_trend": "hype",
+    "metric_price": "egg price",
+    "metric_tokens": "cash",
+    "metric_eggs": "egg stash",
+    "cmp_above": "clears",
+    "cmp_below": "dips under",
+    "act_buy_eggs": "buy %s eggs",
+    "act_sell_eggs": "sell %s eggs",
+    "act_open_call": "YOLO a %s 🪙 call",
+    "act_open_put": "YOLO a %s 🪙 put",
+    "roster": {
+      "momentum": {
+        "name": "MomentumGPT",
+        "blurb": "Buys whatever's already going up. Has never read a balance sheet. Bills you a subscription for the privilege."
+      },
+      "dipbuyer": {
+        "name": "BuyTheDip.ai",
+        "blurb": "Sees a lower price and calls it 'accumulating.' It's your card, so technically you're accumulating."
+      },
+      "profittaker": {
+        "name": "ExitLiquidity LLM",
+        "blurb": "Sells into strength so you don't have to feel joy. Takes a 2-and-20 cut of feelings."
+      },
+      "degencall": {
+        "name": "LeverageBro 9000",
+        "blurb": "Straps a rocket to the hype and lights it with your credit card. Refers to margin calls as 'learning experiences.'"
+      },
+      "degenput": {
+        "name": "DoomerAgent",
+        "blurb": "Convinced someone will finally ask about revenue. Shorts the bubble with money that isn't its own. Guess whose."
+      }
+    }
   }
 }

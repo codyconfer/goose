@@ -159,6 +159,29 @@ func TestPriceReRollsOnlyOnSlowBeat(t *testing.T) {
 	}
 }
 
+func TestBaselineYieldAccruesOnlyOnSlowBeat(t *testing.T) {
+	// Fresh state: no producers, no consumers — nothing moves except the baseline.
+	m := New(economy.NewMachine(), events.NewMachine(), 0)
+
+	base := time.Unix(1_700_000_000, 0)
+	m.rng = rand.New(rand.NewSource(1))
+	m.clock = newClock(base)
+
+	for i := 1; i <= 9; i++ {
+		n, _ := m.Update(upBeatMsg(base.Add(time.Duration(i) * upBeatRate)))
+		m = n.(Model)
+	}
+	if s := m.econ.Get(); s.Eggs != 0 || s.Tokens != 0 {
+		t.Fatalf("baseline accrued before slow beat: eggs=%v tokens=%v", s.Eggs, s.Tokens)
+	}
+
+	n, _ := m.Update(upBeatMsg(base.Add(10 * upBeatRate)))
+	m = n.(Model)
+	if s := m.econ.Get(); s.Eggs != 1 || s.Tokens != 1 {
+		t.Fatalf("baseline did not drip on slow beat: eggs=%v tokens=%v", s.Eggs, s.Tokens)
+	}
+}
+
 func TestMenuStartNewGame(t *testing.T) {
 	isolateHome(t)
 	m := NewMenu()
@@ -357,6 +380,11 @@ func TestViewRendersEveryScreen(t *testing.T) {
 	g.screen = &characterScreen{char: &ch, prev: &gameScreen{}}
 	if !strings.Contains(g.View(), "VENTURE CAPITALIST") {
 		t.Error("character view missing header")
+	}
+
+	g.screen = &agentsScreen{prev: &gameScreen{}}
+	if !strings.Contains(g.View(), "AGENT DESK") {
+		t.Error("agents view missing header")
 	}
 
 	g.quitting = true

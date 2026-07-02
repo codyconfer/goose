@@ -299,6 +299,7 @@ const (
 	pnlRows      = 8
 	positionRows = 8
 	queueRows    = 8
+	agentRows    = 8
 )
 
 func renderLedger(m *Model, sv panels.ScrollState) string {

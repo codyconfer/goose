@@ -193,8 +193,12 @@ func (m *Model) beatMid() {
 }
 
 func (m *Model) beatSlow() {
+	m.econ.BaselineYield()
 	m.econ.UpdatePrice(m.priceAccum, m.rng)
 	m.priceAccum = 0
+	for _, ev := range m.econ.RunAgents() {
+		m.setFlash(agentFiredMsg(ev))
+	}
 	m.recordPrice()
 }
 

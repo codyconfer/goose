@@ -5,6 +5,9 @@ import "github.com/codyconfer/goose/internal/content"
 var (
 	costGrowth = content.Balance.CostGrowth
 
+	baselineTokens = content.Balance.BaselineTokens
+	baselineEggs   = content.Balance.BaselineEggs
+
 	BasePrice        = content.Balance.BasePrice
 	consumerAppetite = content.Balance.ConsumerAppetite
 	crowdHeadroom    = content.Balance.CrowdHeadroom

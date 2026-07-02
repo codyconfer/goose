@@ -50,6 +50,17 @@ func (m *Machine) layEggs(n float64) {
 	m.gainEggs(n)
 }
 
+// BaselineYield is the passive stipend that keeps the game moving with no input.
+// It fires on the slow beat so tokens and eggs tick up even before the player
+// owns a single producer.
+func (m *Machine) BaselineYield() {
+	if m.s.Frozen() {
+		return
+	}
+	m.earn(baselineTokens)
+	m.layEggs(baselineEggs)
+}
+
 func (m *Machine) Produce(dt float64) {
 	if m.s.Frozen() {
 		return
