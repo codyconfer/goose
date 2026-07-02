@@ -38,6 +38,14 @@ func (gs *gameScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		gs.buy(m)
 	case "s":
 		gs.sell(m)
+	case "B":
+		gs.queueMaxTrade(m, economy.TxBuyEggs)
+	case "S":
+		gs.queueMaxTrade(m, economy.TxSellEggs)
+	case "O", "C":
+		gs.openMaxPosition(m, economy.PosCall)
+	case "P":
+		gs.openMaxPosition(m, economy.PosPut)
 	case "t":
 		m.screen = &tradeScreen{prev: gs, kind: economy.TxBuyEggs}
 	}
@@ -66,6 +74,29 @@ func (gs *gameScreen) sell(m *Model) {
 	} else {
 		m.setFlash(it.cantSellMsg())
 	}
+}
+
+func (gs *gameScreen) queueMaxTrade(m *Model, kind economy.TxKind) {
+	ts := tradeScreen{kind: kind, sizeIdx: len(tradeSizes)}
+	ts.schedule(m)
+}
+
+func (gs *gameScreen) openMaxPosition(m *Model, kind economy.PosKind) {
+	if m.econ.Get().Level() < economy.SpecUnlockLevel {
+		m.setFlash(fmt.Sprintf(content.Text.Trade.SpecLockedFmt, economy.SpecUnlockLevel))
+		return
+	}
+	premiumIdx := maxAffordableSpecPremiumIdx(m.econ.Get().Tokens)
+	if premiumIdx < 0 {
+		m.setFlash(content.Text.Spec.CantAfford)
+		return
+	}
+	ss := specScreen{
+		kind:        kind,
+		premiumIdx:  premiumIdx,
+		leverageIdx: len(specLeverages) - 1,
+	}
+	ss.open(m)
 }
 
 func (gs *gameScreen) view(m *Model) string {
@@ -140,4 +171,13 @@ func (m Model) nextLockedTeaser() (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func maxAffordableSpecPremiumIdx(tokens float64) int {
+	for i := len(specPremiums) - 1; i >= 0; i-- {
+		if specPremiums[i] <= tokens {
+			return i
+		}
+	}
+	return -1
 }

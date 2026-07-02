@@ -1,0 +1,2133 @@
+{
+  "events": [
+    {
+      "key": "lucky_egg",
+      "trigger": { "type": "chance", "p": { "min": 0.007, "max": 0.010 } },
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🍀 Lucky Egg"],
+          "messages": ["You find a rare golden egg and flip it to a collector who really gets the vision for {{num .gain}} bonus tokens."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "max",
+                "args": [
+                  {
+                    "op": "mul",
+                    "args": [
+                      { "op": "state", "name": "per_click" },
+                      { "op": "rand_int", "min_int": 3, "max_int": 7 }
+                    ]
+                  },
+                  { "value": 5 }
+                ]
+              }
+            }
+          ],
+          "effects": [{ "type": "earn", "value": { "op": "var", "name": "gain" } }]
+        }
+      ]
+    },
+    {
+      "key": "golden_hour",
+      "trigger": { "type": "chance", "p": { "min": 0.006, "max": 0.010 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 50 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🌟 Golden Hour"],
+          "messages": ["The whole flock catches the same standup energy at once and throws off {{num .gain}} tokens before the vibe wears off."],
+          "values": [
+            {
+              "key": "base",
+              "value": {
+                "op": "max",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 45 }] },
+                      { "op": "mul", "args": [{ "op": "state", "name": "per_click" }, { "value": 20 }] }
+                    ]
+                  },
+                  { "value": 100 }
+                ]
+              }
+            },
+            {
+              "key": "gain",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "var", "name": "base" },
+                  { "op": "rand", "min": 1, "max": 2 }
+                ]
+              }
+            }
+          ],
+          "effects": [{ "type": "earn", "value": { "op": "var", "name": "gain" } }]
+        }
+      ]
+    },
+    {
+      "key": "market_boom",
+      "trigger": { "type": "chance", "p": { "min": 0.006, "max": 0.010 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "tokens_per_second" }, "op": "gt", "right": { "value": 0 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["📈 Market Boom"],
+          "messages": ["Demand surges on no news whatsoever and buyers hurl {{num .gain}} tokens at you purely to avoid missing out."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "tokens_per_second" },
+                  { "op": "rand_int", "min_int": 60, "max_int": 119 }
+                ]
+              }
+            }
+          ],
+          "effects": [{ "type": "earn", "value": { "op": "var", "name": "gain" } }]
+        }
+      ]
+    },
+    {
+      "key": "wandering_goose",
+      "trigger": { "type": "chance", "p": { "min": 0.004, "max": 0.007 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 120 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🪂 Soft Landing"],
+          "messages": ["A goose washes up from a startup that just burned its last round and joins your flock for free."],
+          "effects": [{ "type": "grant_producer", "key": "server", "count": 1 }]
+        }
+      ]
+    },
+    {
+      "key": "market_day",
+      "trigger": { "type": "chance", "p": { "min": 0.008, "max": 0.012 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "tokens" }, "op": "gt", "right": { "value": 20 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🛒 Market Day"],
+          "messages": ["A rival data center liquidates its inventory and you snap up {{num .bought}} eggs for {{num .spend}} tokens."],
+          "values": [
+            {
+              "key": "price",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "egg_price" },
+                  { "op": "rand", "min": 0.30, "max": 0.60 }
+                ]
+              }
+            },
+            {
+              "key": "spend",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "tokens" },
+                  { "op": "rand", "min": 0.20, "max": 0.50 }
+                ]
+              }
+            },
+            {
+              "key": "bought",
+              "value": {
+                "op": "div",
+                "args": [
+                  { "op": "var", "name": "spend" },
+                  { "op": "var", "name": "price" }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            {
+              "type": "trade",
+              "kind": "buy_eggs",
+              "value": { "op": "var", "name": "bought" },
+              "price": { "op": "var", "name": "price" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "fox_raid",
+      "trigger": { "type": "chance", "p": { "min": 0.006, "max": 0.010 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "tokens" }, "op": "gt", "right": { "value": 50 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "warning",
+          "titles": ["🧠 Brain Drain"],
+          "messages": ["A rival lab waves obscene signing bonuses around and {{num .loss}} tokens fly out the door just to keep the flock from walking."],
+          "values": [
+            {
+              "key": "loss",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "tokens" },
+                  { "op": "rand", "min": 0.08, "max": 0.20 }
+                ]
+              }
+            }
+          ],
+          "effects": [{ "type": "spend", "value": { "op": "var", "name": "loss" } }]
+        }
+      ]
+    },
+    {
+      "key": "margin_call",
+      "trigger": { "type": "margin", "chance": { "value": 0.25 } },
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "negative",
+          "titles": ["🏦 Margin Call"],
+          "messages": ["A twitchy prop desk marks your book to market and pulls the plug. The margin clerk takes {{printf \"%.0f\" .pct}}%% of it back."],
+          "values": [
+            { "key": "pct", "value": { "value": 40 } }
+          ],
+          "effects": [{ "type": "margin_call", "factor": { "value": 0.4 } }]
+        }
+      ]
+    },
+    {
+      "key": "flash_crash",
+      "trigger": { "type": "chance", "p": { "min": 0.007, "max": 0.011 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "price_factor" }, "op": "gt", "right": { "value": 0.9 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "warning",
+          "titles": ["📉 Flash Crash"],
+          "messages": ["A skeptical thread goes viral and the whole egg complex gaps down before anyone can find the sell button."],
+          "values": [
+            { "key": "shock", "value": { "op": "rand", "min": 0.55, "max": 0.75 } }
+          ],
+          "effects": [{ "type": "shock_price", "factor": { "op": "var", "name": "shock" } }]
+        }
+      ]
+    },
+    {
+      "key": "melt_up",
+      "trigger": { "type": "chance", "p": { "min": 0.007, "max": 0.011 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "price_factor" }, "op": "lt", "right": { "value": 1.6 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🚀 Melt-Up"],
+          "messages": ["An analyst updates a model no one understands and eggs rip vertical on zero new information."],
+          "values": [
+            { "key": "shock", "value": { "op": "rand", "min": 1.25, "max": 1.50 } }
+          ],
+          "effects": [{ "type": "shock_price", "factor": { "op": "var", "name": "shock" } }]
+        }
+      ]
+    },
+    {
+      "key": "press_darling",
+      "trigger": { "type": "level", "level": 3 },
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["📰 Local Darlings"],
+          "messages": ["A breathless blog post crowns the flock and you pocket {{num .gain}} tokens as fresh buyers crowd in."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 120 }] },
+                  { "value": 100 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "grow_crowd", "factor": { "value": 1.5 } },
+            { "type": "earn", "value": { "op": "var", "name": "gain" } }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "ipo_rumor",
+      "trigger": { "type": "market_cap", "cap": 100000 },
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🏦 IPO Rumors"],
+          "messages": ["Bankers start whispering S-1 at each other and speculative buying nets you {{num .gain}} tokens."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 300 }] },
+                  { "value": 500 }
+                ]
+              }
+            }
+          ],
+          "effects": [{ "type": "earn", "value": { "op": "var", "name": "gain" } }]
+        }
+      ]
+    },
+    {
+      "key": "selling_frenzy",
+      "trigger": { "type": "egg_price", "high": 4.5, "chance": { "value": 0.05 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "eggs" }, "op": "gt", "right": { "value": 10 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🤑 Selling Frenzy"],
+          "messages": ["Eggs are trading at a premium nobody can justify, so you unload {{num .sold}} of them for {{num .earned}} tokens."],
+          "values": [
+            {
+              "key": "sold",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "eggs" },
+                  { "op": "rand", "min": 0.10, "max": 0.30 }
+                ]
+              }
+            },
+            {
+              "key": "earned",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "var", "name": "sold" },
+                  { "op": "state", "name": "sell_price" }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            {
+              "type": "trade",
+              "kind": "sell_eggs",
+              "value": { "op": "var", "name": "sold" },
+              "price": { "op": "state", "name": "sell_price" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "circular_investment",
+      "trigger": { "type": "chance", "p": { "min": 0.006, "max": 0.009 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 5000 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 0.7 },
+          "tone": "positive",
+          "titles": ["🔄 Circular Investment"],
+          "messages": ["Two data-center barons announce they are investing in each other and, somehow, in you. {{num .gain}} tokens spill over."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 150 }] },
+                  { "value": 400 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "earn", "value": { "op": "var", "name": "gain" } },
+            { "type": "grow_crowd", "factor": { "value": 1.2 } },
+            { "type": "add_consumers", "value": { "value": 6 } }
+          ]
+        },
+        {
+          "weight": { "value": 0.3 },
+          "tone": "warning",
+          "titles": ["🔗 The Circle Broke"],
+          "messages": ["One baron misses a payment and the whole daisy-chain unwinds. {{num .loss}} tokens keep going, right out the door."],
+          "values": [
+            {
+              "key": "loss",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "tokens" },
+                  { "op": "rand", "min": 0.08, "max": 0.18 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "spend", "value": { "op": "var", "name": "loss" } },
+            { "type": "grow_crowd", "factor": { "value": 0.85 } },
+            { "type": "shock_price", "factor": { "value": 0.9 } }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "roi_reckoning",
+      "trigger": { "type": "chance", "p": { "min": 0.005, "max": 0.008 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 3000 } },
+        { "left": { "op": "state", "name": "tokens" }, "op": "gt", "right": { "value": 100 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "warning",
+          "titles": ["🧮 ROI Reckoning"],
+          "messages": ["A CFO finally asks what the return on all these eggs is. {{num .loss}} tokens get clawed back and the momentum crowd sobers up."],
+          "values": [
+            {
+              "key": "loss",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "tokens" },
+                  { "op": "rand", "min": 0.10, "max": 0.25 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "spend", "value": { "op": "var", "name": "loss" } },
+            { "type": "grow_crowd", "factor": { "value": 0.8 } }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "token_burn",
+      "trigger": { "type": "chance", "p": { "min": 0.007, "max": 0.011 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "tokens" }, "op": "gt", "right": { "value": 200 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "warning",
+          "titles": ["🔥 Token Burn"],
+          "messages": ["An intern leaves the goose running overnight on max reasoning and you wake up to a {{num .loss}}-token bill."],
+          "values": [
+            {
+              "key": "loss",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "tokens" },
+                  { "op": "rand", "min": 0.05, "max": 0.15 }
+                ]
+              }
+            }
+          ],
+          "effects": [{ "type": "spend", "value": { "op": "var", "name": "loss" } }]
+        }
+      ]
+    },
+    {
+      "key": "gpu_shortage",
+      "trigger": { "type": "chance", "p": { "min": 0.006, "max": 0.010 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "tokens" }, "op": "gt", "right": { "value": 1000 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "warning",
+          "titles": ["🪫 GPU Shortage"],
+          "messages": ["Every card on Earth is allocated to someone with a bigger check, so you pay {{num .loss}} tokens in scalper markup just to keep the geese warm."],
+          "values": [
+            {
+              "key": "loss",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "tokens" },
+                  { "op": "rand", "min": 0.06, "max": 0.16 }
+                ]
+              }
+            }
+          ],
+          "effects": [{ "type": "spend", "value": { "op": "var", "name": "loss" } }]
+        }
+      ]
+    },
+    {
+      "key": "vaporware_keynote",
+      "trigger": { "type": "chance", "p": { "min": 0.006, "max": 0.009 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 2000 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 0.72 },
+          "tone": "positive",
+          "titles": ["🎤 Vaporware Keynote"],
+          "messages": ["You demo an egg that does not exist yet to rapturous applause and {{num .gain}} tokens arrive before anyone asks for a ship date."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 90 }] },
+                  { "value": 250 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "earn", "value": { "op": "var", "name": "gain" } },
+            { "type": "grow_crowd", "factor": { "value": 1.25 } }
+          ]
+        },
+        {
+          "weight": { "value": 0.28 },
+          "tone": "warning",
+          "titles": ["🎬 The Demo Failed On Stage"],
+          "messages": ["The pre-rendered egg freezes, crashes, and loops all night with a laugh track. The believers wince and the tourists leave."],
+          "effects": [{ "type": "grow_crowd", "factor": { "value": 0.82 } }]
+        }
+      ]
+    },
+    {
+      "key": "chip_delay",
+      "trigger": { "type": "chance", "p": { "min": 0.005, "max": 0.008 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 5000 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "warning",
+          "titles": ["🍽️ Dinner-Plate Chip Delay"],
+          "messages": ["Your custom silicon quietly slips another year. The believers hold; the tourists drift off."],
+          "effects": [{ "type": "grow_crowd", "factor": { "value": 0.85 } }]
+        }
+      ]
+    },
+    {
+      "key": "stargate_groundbreaking",
+      "trigger": { "type": "level", "level": 7 },
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🌌 Stargate Groundbreaking"],
+          "messages": ["You break ground on a megacluster with a gold shovel and {{num .gain}} tokens rain down. Financing can wait."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 200 }] },
+                  { "value": 5000 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "grow_crowd", "factor": { "value": 1.6 } },
+            { "type": "earn", "value": { "op": "var", "name": "gain" } }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "sovereign_mandate",
+      "trigger": { "type": "level", "level": 9 },
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🗽 Sovereign AI Mandate"],
+          "messages": ["A nation-state declares your flock critical infrastructure and signs a blank check worth {{num .gain}} tokens."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 300 }] },
+                  { "value": 100000 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "earn", "value": { "op": "var", "name": "gain" } },
+            { "type": "add_consumers", "value": { "value": 40 } }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "ludicrous_valuation",
+      "trigger": { "type": "level", "level": 11 },
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🏭 Quadrillion-Token Valuation"],
+          "messages": ["Analysts stop analyzing and simply believe. {{num .gain}} tokens materialize out of pure narrative gravity."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 400 }] },
+                  { "value": 5000000 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "earn", "value": { "op": "var", "name": "gain" } },
+            { "type": "grow_crowd", "factor": { "value": 2.0 } }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "open_weights_dump",
+      "trigger": { "type": "chance", "p": { "min": 0.006, "max": 0.009 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 4000 } },
+        { "left": { "op": "state", "name": "price_factor" }, "op": "gt", "right": { "value": 0.8 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "warning",
+          "titles": ["📂 Rival Open-Sources Their Eggs"],
+          "messages": ["A lab you had never heard of dumps a comparable egg on the internet for free and the whole complex reprices lower."],
+          "values": [
+            { "key": "shock", "value": { "op": "rand", "min": 0.72, "max": 0.87 } }
+          ],
+          "effects": [
+            { "type": "shock_price", "factor": { "op": "var", "name": "shock" } },
+            { "type": "grow_crowd", "factor": { "value": 0.9 } }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "efficiency_memo",
+      "trigger": { "type": "chance", "p": { "min": 0.006, "max": 0.010 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 3000 } },
+        { "left": { "op": "state", "name": "tokens" }, "op": "gt", "right": { "value": 100 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 0.6 },
+          "tone": "positive",
+          "titles": ["✂️ Unlocking Efficiencies"],
+          "messages": ["You right-size the flock and the market rewards the discipline with {{num .gain}} tokens on the news."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 50 }] },
+                  { "value": 200 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "earn", "value": { "op": "var", "name": "gain" } },
+            { "type": "grow_crowd", "factor": { "value": 0.95 } }
+          ]
+        },
+        {
+          "weight": { "value": 0.4 },
+          "tone": "warning",
+          "titles": ["😠 The Layoff Backlash"],
+          "messages": ["The memo leaks with the CEO's yacht in the background. Morale craters and the crowd sours on the whole vibe."],
+          "effects": [{ "type": "grow_crowd", "factor": { "value": 0.8 } }]
+        }
+      ]
+    },
+    {
+      "key": "superintelligence_blog",
+      "trigger": { "type": "chance", "p": { "min": 0.006, "max": 0.009 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 6000 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 0.65 },
+          "tone": "positive",
+          "titles": ["🧠 The Gentle Singularity"],
+          "messages": ["You publish a 3,000-word blog promising the eggs will cure everything and {{num .gain}} tokens of true believers arrive."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 80 }] },
+                  { "value": 400 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "earn", "value": { "op": "var", "name": "gain" } },
+            { "type": "grow_crowd", "factor": { "value": 1.3 } }
+          ]
+        },
+        {
+          "weight": { "value": 0.35 },
+          "tone": "neutral",
+          "titles": ["🥱 Nobody Read the Blog"],
+          "messages": ["You publish the manifesto. It gets twelve likes and a reply asking when the eggs will actually ship."],
+          "effects": [{ "type": "grow_crowd", "factor": { "value": 0.99 } }]
+        }
+      ]
+    },
+    {
+      "key": "data_breach",
+      "trigger": { "type": "chance", "p": { "min": 0.005, "max": 0.008 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "tokens" }, "op": "gt", "right": { "value": 500 } },
+        { "left": { "op": "state", "name": "consumers" }, "op": "gt", "right": { "value": 5 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "negative",
+          "titles": ["🔓 Egg Data Breach"],
+          "messages": ["Every customer's egg-buying history leaks online. {{num .fine}} tokens go to incident response and part of the crowd never comes back."],
+          "values": [
+            {
+              "key": "fine",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "tokens" },
+                  { "op": "rand", "min": 0.07, "max": 0.15 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "spend", "value": { "op": "var", "name": "fine" } },
+            { "type": "grow_crowd", "factor": { "value": 0.85 } }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "grid_strain",
+      "trigger": { "type": "chance", "p": { "min": 0.006, "max": 0.009 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "tokens" }, "op": "gt", "right": { "value": 2000 } },
+        { "left": { "op": "owned", "key": "datacenter" }, "op": "gt", "right": { "value": 0 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 0.6 },
+          "tone": "warning",
+          "titles": ["⚡ Grid Strain Surcharge"],
+          "messages": ["Your data centers now draw more power than a mid-size town and a {{num .bill}}-token peak-demand surcharge lands on your desk."],
+          "values": [
+            {
+              "key": "bill",
+              "value": {
+                "op": "mul",
+                "args": [
+                  { "op": "state", "name": "tokens" },
+                  { "op": "rand", "min": 0.05, "max": 0.13 }
+                ]
+              }
+            }
+          ],
+          "effects": [{ "type": "spend", "value": { "op": "var", "name": "bill" } }]
+        },
+        {
+          "weight": { "value": 0.4 },
+          "tone": "warning",
+          "titles": ["🔌 Rolling Brownout"],
+          "messages": ["The regional grid buckles under your compute and the utility throttles you off-peak."],
+          "values": [
+            { "key": "dur", "value": { "op": "rand", "min": 6, "max": 14 } }
+          ],
+          "effects": [{ "type": "freeze", "value": { "op": "var", "name": "dur" }, "key": "the power grid tapped out under your data centers" }]
+        }
+      ]
+    },
+    {
+      "key": "bagholder_capitulation",
+      "trigger": { "type": "egg_price", "low": 1.375, "chance": { "value": 0.06 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 3000 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "warning",
+          "titles": ["🫠 Bagholder Capitulation"],
+          "messages": ["Prices stay ugly long enough that the last diamond-handed believers finally give up and post their loss porn."],
+          "effects": [{ "type": "grow_crowd", "factor": { "value": 0.8 } }]
+        }
+      ]
+    },
+    {
+      "key": "hype_cycle_peak",
+      "trigger": { "type": "egg_price", "high": 4.75, "chance": { "value": 0.05 } },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 4000 } }
+      ],
+      "outcomes": [
+        {
+          "weight": { "value": 1 },
+          "tone": "positive",
+          "titles": ["🎢 Peak of Inflated Expectations"],
+          "messages": ["Every magazine cover is a goose and you ride the mania for {{num .gain}} tokens before anyone asks what revenue means."],
+          "values": [
+            {
+              "key": "gain",
+              "value": {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 60 }] },
+                  { "value": 300 }
+                ]
+              }
+            }
+          ],
+          "effects": [
+            { "type": "earn", "value": { "op": "var", "name": "gain" } },
+            { "type": "grow_crowd", "factor": { "value": 1.15 } }
+          ]
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "key": "vc",
+      "headline": "💼 A VENTURE CAPITALIST APPEARS",
+      "chance": { "min": 0.018, "max": 0.024 },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 1000 } }
+      ],
+      "text": {
+        "name": [
+          "Jerry Tan of But Why? Combinator",
+          "Marc Andregoosen of a16zzz",
+          "Chamath Palihonkitiya of a blank-check SPAC",
+          "Masa's Golden Egg Factory SPV",
+          "Vinod Cooshla, thesis-first"
+        ]
+      },
+      "pitches": [
+        "{{.name}} waddles in, quarter-zip vest and all. Love the flock. Love the honk. I'll wire {{num .invest}} tokens at a valuation we both agree to never justify.",
+        "{{.name}} slides into the nest already mid-thread. Everyone is crying about ROI. Boring. Here's {{num .invest}} tokens. We'll figure out what it does after the term sheet."
+      ],
+      "vars": [{ "key": "invest_mult", "min": 1.0, "max": 2.0 }],
+      "values": [
+        {
+          "key": "invest",
+          "value": {
+            "op": "mul",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 120 }] },
+                  { "value": 500 }
+                ]
+              },
+              { "op": "var", "name": "invest_mult" }
+            ]
+          }
+        }
+      ],
+      "options": [
+        {
+          "label": "Sign the term sheet",
+          "desc": "Take the check now. Money this easy always has fine print.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.55 },
+              "tone": "positive",
+              "titles": ["🤝 Deal Closed"],
+              "messages": ["{{.name}} wires {{num .invest}} tokens and tweets that they were early to the goose. A wave of momentum chasers piles in."],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "invest" } },
+                { "type": "grow_crowd", "factor": { "value": 1.25 } },
+                { "type": "add_consumers", "value": { "value": 5 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "neutral",
+              "titles": ["🧷 Dirty Term Sheet"],
+              "messages": ["{{.name}} wires the {{num .invest}} tokens behind a board seat and full-ratchet anti-dilution. You took the money and the leash."],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "invest" } },
+                { "type": "grow_crowd", "factor": { "value": 0.95 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.20 },
+              "tone": "negative",
+              "titles": ["🦈 Liquidation Preference"],
+              "messages": ["Page forty of the term sheet was real. {{.name}} claws back the {{num .invest}} tokens and takes your best machine on the way out."],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "invest" } },
+                { "type": "spend", "value": { "op": "var", "name": "invest" } },
+                { "type": "seize_best" }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Counter at a stupid valuation",
+          "desc": "Ask for double at a number no one can defend.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.35 },
+              "tone": "positive",
+              "titles": ["💼 FOMO Wins"],
+              "messages": ["{{.name}} panics that a rival fund might get the allocation, doubles to {{num .big}}, and throws in a rack to help you scale into the vision."],
+              "values": [
+                {
+                  "key": "big",
+                  "value": {
+                    "op": "mul",
+                    "args": [{ "op": "var", "name": "invest" }, { "value": 2 }]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "big" } },
+                { "type": "grant_producer", "key": "rack", "count": 1 }
+              ]
+            },
+            {
+              "weight": { "value": 0.30 },
+              "tone": "neutral",
+              "titles": ["🤏 Split the Difference"],
+              "messages": ["{{.name}} blinks and matches the original {{num .invest}} tokens just to keep it moving."],
+              "effects": [{ "type": "earn", "value": { "op": "var", "name": "invest" } }]
+            },
+            {
+              "weight": { "value": 0.35 },
+              "tone": "negative",
+              "titles": ["🚪 Down-Round Whispers"],
+              "messages": ["{{.name}} laughs, walks, and posts a subtweet. You bleed {{num .loss}} tokens and half the crowd reads it."],
+              "values": [
+                { "key": "loss", "value": { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "loss" } },
+                { "type": "grow_crowd", "factor": { "value": 0.6 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Ask them to define ROI",
+          "desc": "Stay independent and ask what the money is actually for.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.70 },
+              "tone": "neutral",
+              "titles": ["🪿 Stayed Independent"],
+              "messages": ["You ask {{.name}} one question about revenue and they suddenly have another meeting. The flock stays yours."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 1.05 } }]
+            },
+            {
+              "weight": { "value": 0.18 },
+              "tone": "positive",
+              "titles": ["🌱 Warm Intro Instead"],
+              "messages": ["Charmed that you did not grovel, {{.name}} sends a few actual customers instead of a check."],
+              "effects": [
+                { "type": "grow_crowd", "factor": { "value": 1.12 } },
+                { "type": "add_consumers", "value": { "value": 6 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.12 },
+              "tone": "warning",
+              "titles": ["🧊 Frozen Out"],
+              "messages": ["{{.name}} takes the no personally and mentions on three podcasts that your flock is not fundable."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 0.9 } }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "wook",
+      "headline": "🍄 A VISIONARY APPEARS",
+      "chance": { "min": 0.015, "max": 0.020 },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 400 } }
+      ],
+      "pitches": [
+        "A barefoot wook drifts in smelling of palo santo and cold brew. What if the eggs were on-chain? I need {{num .ask}} tokens and total creative control.",
+        "A guy with a melting smartwatch corners the flock. Forget selling eggs. We sell the idea of eggs. It is {{num .ask}} tokens to start believing."
+      ],
+      "vars": [{ "key": "ask_mult", "min": 1.0, "max": 2.0 }],
+      "values": [
+        {
+          "key": "ask",
+          "value": {
+            "op": "mul",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 40 }] },
+                  { "value": 250 }
+                ]
+              },
+              { "op": "var", "name": "ask_mult" }
+            ]
+          }
+        }
+      ],
+      "options": [
+        {
+          "label": "Let him cook",
+          "desc": "Chase the vision with both wings.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.05 },
+              "tone": "positive",
+              "titles": ["🚀 The Maniac Was Right"],
+              "messages": ["The honk-token does not just pump, it ascends, and {{num .win}} tokens land before anyone reads the whitepaper."],
+              "values": [
+                {
+                  "key": "win",
+                  "value": {
+                    "op": "mul",
+                    "args": [
+                      { "op": "var", "name": "ask" },
+                      { "op": "rand", "min": 5, "max": 10 }
+                    ]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "win" } },
+                { "type": "grow_crowd", "factor": { "value": 1.6 } },
+                { "type": "add_consumers", "value": { "value": 15 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.15 },
+              "tone": "positive",
+              "titles": ["🌈 It Somehow Worked"],
+              "messages": ["Against all reason the honk-token pumps and the flock nets {{num .win}} tokens before anyone asks what it does."],
+              "values": [
+                {
+                  "key": "win",
+                  "value": {
+                    "op": "mul",
+                    "args": [
+                      { "op": "var", "name": "ask" },
+                      { "op": "rand", "min": 2, "max": 4 }
+                    ]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "win" } },
+                { "type": "grow_crowd", "factor": { "value": 1.3 } },
+                { "type": "add_consumers", "value": { "value": 8 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.55 },
+              "tone": "negative",
+              "titles": ["🌀 Fully Derailed"],
+              "messages": ["Three weeks later the goose is a DAO with no product and {{num .burn}} tokens are gone."],
+              "values": [
+                {
+                  "key": "burn",
+                  "value": {
+                    "op": "mul",
+                    "args": [
+                      { "op": "state", "name": "tokens" },
+                      { "op": "rand", "min": 0.20, "max": 0.45 }
+                    ]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "burn" } },
+                { "type": "grow_crowd", "factor": { "value": 0.65 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "negative",
+              "titles": ["🪤 Rugged By Your Own Wook"],
+              "messages": ["The wook drains the liquidity and DMs you a sunset from a jurisdiction with no extradition. {{num .burn}} tokens vanish."],
+              "values": [
+                {
+                  "key": "burn",
+                  "value": {
+                    "op": "mul",
+                    "args": [
+                      { "op": "state", "name": "tokens" },
+                      { "op": "rand", "min": 0.45, "max": 0.70 }
+                    ]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "burn" } },
+                { "type": "grow_crowd", "factor": { "value": 0.45 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Nod and expense a coffee",
+          "desc": "Hear him out, buy him a drink, commit to nothing.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.70 },
+              "tone": "neutral",
+              "titles": ["☕ Politely Contained"],
+              "messages": ["You circle back the wook into the void for the price of a {{num .tab}}-token oat latte."],
+              "values": [
+                { "key": "tab", "value": { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.02 }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "tab" } },
+                { "type": "grow_crowd", "factor": { "value": 0.97 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.15 },
+              "tone": "positive",
+              "titles": ["💡 One Good Idea, By Accident"],
+              "messages": ["Somewhere in the ninety-minute monologue the wook says one genuinely smart thing about distribution."],
+              "effects": [
+                { "type": "grow_crowd", "factor": { "value": 1.08 } },
+                { "type": "add_consumers", "value": { "value": 3 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.15 },
+              "tone": "warning",
+              "titles": ["🛋️ He Moved Into the Nest"],
+              "messages": ["The wook mistakes the free coffee for a co-founder offer and eats {{num .tab}} tokens of snacks and vibes."],
+              "values": [
+                { "key": "tab", "value": { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.06 }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "tab" } },
+                { "type": "grow_crowd", "factor": { "value": 0.95 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Ban him from the pond",
+          "desc": "No pivots, no vibes, just geese shipping Goose Premium.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.80 },
+              "tone": "positive",
+              "titles": ["🚫 Focus Restored"],
+              "messages": ["You escort the visionary back to the parking lot and word gets around that this is a serious operation."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 1.08 } }]
+            },
+            {
+              "weight": { "value": 0.20 },
+              "tone": "warning",
+              "titles": ["📸 He Livestreamed the Ban"],
+              "messages": ["The wook films himself getting walked out and captions it they were not ready for the vision."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 1.02 } }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "booster",
+      "headline": "🧥 THE LEATHER JACKET ARRIVES",
+      "chance": { "min": 0.013, "max": 0.018 },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 8000 } }
+      ],
+      "pitches": [
+        "Jet Set Huang arrives in a leather jacket and announces a virtuous circle: he invests {{num .invest}} tokens in you, you buy compute from him, and everyone marks it as revenue.",
+        "Jet Set Huang produces a slide with one arrow eating its own tail. He is prepared to invest {{num .invest}} tokens and call it a flywheel."
+      ],
+      "vars": [{ "key": "invest_mult", "min": 1.0, "max": 2.0 }],
+      "values": [
+        {
+          "key": "invest",
+          "value": {
+            "op": "mul",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 180 }] },
+                  { "value": 2000 }
+                ]
+              },
+              { "op": "var", "name": "invest_mult" }
+            ]
+          }
+        }
+      ],
+      "options": [
+        {
+          "label": "Join the flywheel",
+          "desc": "Sign the circular deal and hope the market never stops spinning.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.15 },
+              "tone": "positive",
+              "titles": ["🌐 Sector-Wide Melt-Up"],
+              "messages": ["Huang announces the deal from a stadium stage and the whole egg complex goes vertical. {{num .invest}} tokens arrive with it."],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "invest" } },
+                { "type": "grow_crowd", "factor": { "value": 1.4 } },
+                { "type": "add_consumers", "value": { "value": 12 } },
+                { "type": "shock_price", "factor": { "value": 1.3 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.40 },
+              "tone": "positive",
+              "titles": ["🚀 The Flywheel Spins"],
+              "messages": ["The deal closes quietly and {{num .invest}} tokens plus a wave of new buyers flood in."],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "invest" } },
+                { "type": "grow_crowd", "factor": { "value": 1.25 } },
+                { "type": "add_consumers", "value": { "value": 6 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.20 },
+              "tone": "warning",
+              "titles": ["🛞 The Wheel Sticks"],
+              "messages": ["A journalist maps the circle and buyers hesitate. The deal half-closes and you eat {{num .fee}} tokens in structuring fees."],
+              "values": [
+                { "key": "partial", "value": { "op": "mul", "args": [{ "op": "var", "name": "invest" }, { "value": 0.5 }] } },
+                { "key": "fee", "value": { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.10 }] } }
+              ],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "partial" } },
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "grow_crowd", "factor": { "value": 0.9 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "negative",
+              "titles": ["💥 The Flywheel Was a Ponzi"],
+              "messages": ["An analyst draws the arrow eating its own tail on live TV. {{num .pop}} tokens evaporate and the momentum crowd exits."],
+              "values": [
+                { "key": "partial", "value": { "op": "mul", "args": [{ "op": "var", "name": "invest" }, { "value": 0.3 }] } },
+                {
+                  "key": "pop",
+                  "value": {
+                    "op": "mul",
+                    "args": [
+                      { "op": "state", "name": "tokens" },
+                      { "op": "rand", "min": 0.25, "max": 0.45 }
+                    ]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "partial" } },
+                { "type": "spend", "value": { "op": "var", "name": "pop" } },
+                { "type": "grow_crowd", "factor": { "value": 0.5 } },
+                { "type": "shock_price", "factor": { "value": 0.8 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Just buy a data center off him",
+          "desc": "Pay cash, at a markup, for compute you may or may not need.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.60 },
+              "tone": "neutral",
+              "titles": ["🚜 Compute Acquired"],
+              "messages": ["You overpay {{num .markup}} tokens for a data center. It does actually ship Goose Premium, so that is something."],
+              "values": [
+                { "key": "markup", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "var", "name": "invest" }, { "value": 1.5 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "markup" } },
+                { "type": "grant_producer", "key": "datacenter", "count": 1 },
+                { "type": "add_consumers", "value": { "value": 4 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "warning",
+              "titles": ["🍋 Allocation of Lemons"],
+              "messages": ["You wire {{num .markup}} tokens and take delivery of a data center that turns out to be a pile of lemons."],
+              "values": [
+                { "key": "markup", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "var", "name": "invest" }, { "value": 1.5 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "markup" } },
+                { "type": "grant_producer", "key": "server", "count": 1 }
+              ]
+            },
+            {
+              "weight": { "value": 0.15 },
+              "tone": "positive",
+              "titles": ["🎯 Actually a Steal"],
+              "messages": ["Huang is mid-fundraise and dumps a real data center on you for {{num .markup}} tokens plus a rack to sweeten it."],
+              "values": [
+                { "key": "markup", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "var", "name": "invest" }, { "value": 1.2 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "markup" } },
+                { "type": "grant_producer", "key": "datacenter", "count": 1 },
+                { "type": "grant_producer", "key": "rack", "count": 1 },
+                { "type": "add_consumers", "value": { "value": 4 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Ask where the revenue is",
+          "desc": "Decline the pump and read the footnotes.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.75 },
+              "tone": "positive",
+              "titles": ["🧾 Read the Footnotes"],
+              "messages": ["You ask Huang to point at the revenue on his own slide. He adjusts the jacket, mumbles ecosystem, and leaves."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 1.06 } }]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "positive",
+              "titles": ["📣 He Shouted You Out Anyway"],
+              "messages": ["On his way out Huang name-drops the flock on stage and {{num .gain}} tokens of tasteful FOMO drift in."],
+              "values": [
+                {
+                  "key": "gain",
+                  "value": {
+                    "op": "add",
+                    "args": [
+                      { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 40 }] },
+                      { "value": 300 }
+                    ]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "gain" } },
+                { "type": "grow_crowd", "factor": { "value": 1.08 } }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "politician",
+      "headline": "🏛️ AN ELECTED OFFICIAL APPEARS",
+      "chance": { "min": 0.012, "max": 0.016 },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 2000 } }
+      ],
+      "text": {
+        "name": [
+          "Senator Cornelius Wattlesworth",
+          "Councilwoman Prudence Gaggle",
+          "Rep. Buck Mallard",
+          "Regulator-General Vex",
+          "Mayor Dwight Pinfeather"
+        ],
+        "reason": [
+          "the eggs are suspected of being unregistered securities",
+          "the flock was never licensed to honk after 5pm",
+          "a national-security review of your foreign egg buyers",
+          "the data center is somehow zoned residential",
+          "the eggs are, and I quote, too round"
+        ]
+      },
+      "pitches": [
+        "{{.name}} arrives with a clipboard and three news cameras. On behalf of a subcommittee invented this morning, this operation is suspended. The stated concern: {{.reason}}."
+      ],
+      "options": [
+        {
+          "label": "Comply with the review",
+          "desc": "Shut the doors, cooperate fully, and wait it out.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.35 },
+              "tone": "neutral",
+              "titles": ["🏛️ Cleared Quickly"],
+              "messages": ["{{.name}} gets bored fast. Business halts for about {{printf \"%.0f\" .dur}} seconds and the public loves a cooperative goose."],
+              "values": [{ "key": "dur", "value": { "op": "rand", "min": 8, "max": 15 } }],
+              "effects": [
+                { "type": "freeze", "value": { "op": "var", "name": "dur" }, "key": "{{.reason}}" },
+                { "type": "grow_crowd", "factor": { "value": 1.08 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.45 },
+              "tone": "warning",
+              "titles": ["🏛️ Under Review"],
+              "messages": ["You padlock the pond and cooperate. Business halts for about {{printf \"%.0f\" .dur}} seconds while {{.name}} reads a report they will not finish."],
+              "values": [{ "key": "dur", "value": { "op": "rand", "min": 25, "max": 40 } }],
+              "effects": [
+                { "type": "freeze", "value": { "op": "var", "name": "dur" }, "key": "{{.reason}}" },
+                { "type": "grow_crowd", "factor": { "value": 1.03 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.20 },
+              "tone": "warning",
+              "titles": ["🐌 The Review Drags On"],
+              "messages": ["The subcommittee discovers per-diems and schedules further hearings. The pond stays padlocked for roughly {{printf \"%.0f\" .dur}} seconds."],
+              "values": [{ "key": "dur", "value": { "op": "rand", "min": 50, "max": 70 } }],
+              "effects": [
+                { "type": "freeze", "value": { "op": "var", "name": "dur" }, "key": "{{.reason}}" },
+                { "type": "grow_crowd", "factor": { "value": 0.95 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Lawyer up",
+          "desc": "Pay real legal fees to fight the order.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.15 },
+              "tone": "positive",
+              "titles": ["⚖️ Countersuit Lands"],
+              "messages": ["Your lawyers do not just win. After {{num .fee}} tokens in fees you net a {{num .award}}-token settlement and the crowd cheers the underdog."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.12 }] }] } },
+                {
+                  "key": "award",
+                  "value": {
+                    "op": "add",
+                    "args": [
+                      { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 60 }] },
+                      { "value": 500 }
+                    ]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "earn", "value": { "op": "var", "name": "award" } },
+                { "type": "freeze", "value": { "value": 2 }, "key": "{{.reason}}" },
+                { "type": "grow_crowd", "factor": { "value": 1.15 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.40 },
+              "tone": "neutral",
+              "titles": ["⚖️ Case Dismissed"],
+              "messages": ["Your lawyers point out the subcommittee has no jurisdiction over waterfowl. {{num .fee}} tokens in fees, four seconds of processing, and you are back."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.12 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "freeze", "value": { "value": 4 }, "key": "{{.reason}}" }
+              ]
+            },
+            {
+              "weight": { "value": 0.45 },
+              "tone": "negative",
+              "titles": ["⚖️ You Angered the Committee"],
+              "messages": ["Fighting it was not a good look. You eat {{num .fee}} tokens in fees and a made-to-order {{printf \"%.0f\" .dur}}-second shutdown."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.12 }] }] } },
+                { "key": "dur", "value": { "op": "rand", "min": 45, "max": 65 } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "freeze", "value": { "op": "var", "name": "dur" }, "key": "{{.reason}}" }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Make a campaign contribution",
+          "desc": "Grease the wheels and hope it stays quiet.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.55 },
+              "tone": "neutral",
+              "titles": ["🤝 Wheels Greased"],
+              "messages": ["A {{num .donation}}-token contribution later, the concern is expedited into oblivion."],
+              "values": [
+                { "key": "donation", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "donation" } },
+                { "type": "grow_crowd", "factor": { "value": 0.92 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.20 },
+              "tone": "warning",
+              "titles": ["📰 It Leaked to a Reporter"],
+              "messages": ["The review vanishes, but so does the secrecy. {{num .donation}} tokens gone and a mid-size scandal peels off the crowd."],
+              "values": [
+                { "key": "donation", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "donation" } },
+                { "type": "grow_crowd", "factor": { "value": 0.75 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "negative",
+              "titles": ["🚨 It Was a Sting"],
+              "messages": ["The senator was wearing a wire. You lose {{num .donation}} tokens, eat a {{printf \"%.0f\" .dur}}-second shutdown, and the crowd flees the footage."],
+              "values": [
+                { "key": "donation", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] }] } },
+                { "key": "dur", "value": { "op": "rand", "min": 50, "max": 70 } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "donation" } },
+                { "type": "freeze", "value": { "op": "var", "name": "dur" }, "key": "{{.reason}}" },
+                { "type": "grow_crowd", "factor": { "value": 0.6 } }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "engineer",
+      "headline": "🔧 AN ENGINEER APPEARS",
+      "chance": { "min": 0.014, "max": 0.018 },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 4000 } }
+      ],
+      "pitches": [
+        "A tired engineer sets down a sticker-caked laptop. Profit is revenue minus costs, and the costs are, well, all of them.",
+        "A quiet skeptic draws an arrow on the whiteboard that eats its own tail. It can be popped gently now or much harder later."
+      ],
+      "options": [
+        {
+          "label": "Face the numbers",
+          "desc": "Let them pop it now and keep the sober business that remains.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.40 },
+              "tone": "neutral",
+              "titles": ["🧼 Clean Reset"],
+              "messages": ["The spreadsheet is bad but not fatal. {{num .froth}} tokens of vapor evaporate and the engineer bolts down two real racks."],
+              "values": [
+                { "key": "froth", "value": { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "froth" } },
+                { "type": "grow_crowd", "factor": { "value": 0.7 } },
+                { "type": "grant_producer", "key": "rack", "count": 2 }
+              ]
+            },
+            {
+              "weight": { "value": 0.60 },
+              "tone": "warning",
+              "titles": ["📉 Bubble Popped On Purpose"],
+              "messages": ["You read the spreadsheet out loud. {{num .froth}} tokens of imaginary value vanish, but the survivors run a sober flock."],
+              "values": [
+                { "key": "froth", "value": { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.25 }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "froth" } },
+                { "type": "grow_crowd", "factor": { "value": 0.4 } },
+                { "type": "grant_producer", "key": "rack", "count": 1 }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Put them in the wicker man",
+          "desc": "Discredit the messenger and keep the party going.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.15 },
+              "tone": "positive",
+              "titles": ["🔮 The Prophecy Holds"],
+              "messages": ["You call them a doomer and a fresh megaround the next morning proves you gloriously right for now."],
+              "effects": [
+                { "type": "grow_crowd", "factor": { "value": 1.3 } },
+                { "type": "add_consumers", "value": { "value": 8 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.30 },
+              "tone": "positive",
+              "titles": ["🔥 Messenger, Meet Wicker Man"],
+              "messages": ["The believers cheer louder than ever. The great prophecy holds. For now."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 1.12 } }]
+            },
+            {
+              "weight": { "value": 0.35 },
+              "tone": "negative",
+              "titles": ["💥 The Correction Came Anyway"],
+              "messages": ["Gravity exists. {{num .froth}} tokens burn off and the crowd stampedes for the exits."],
+              "values": [
+                { "key": "froth", "value": { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.35 }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "froth" } },
+                { "type": "grow_crowd", "factor": { "value": 0.3 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.20 },
+              "tone": "negative",
+              "titles": ["⚰️ They Were Right, With Receipts"],
+              "messages": ["The spreadsheet leaks with a timestamp. {{num .froth}} tokens vaporize and the crowd does not just leave, it warns its friends."],
+              "values": [
+                { "key": "froth", "value": { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.50 }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "froth" } },
+                { "type": "grow_crowd", "factor": { "value": 0.25 } },
+                { "type": "shock_price", "factor": { "value": 0.85 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Hire the skeptic",
+          "desc": "Pay them to build the real thing.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.60 },
+              "tone": "neutral",
+              "titles": ["🔧 Reality, In-House"],
+              "messages": ["For {{num .fee}} tokens the engineer joins up and quietly builds two servers that actually work."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "grant_producer", "key": "server", "count": 2 },
+                { "type": "grow_crowd", "factor": { "value": 0.85 } },
+                { "type": "add_consumers", "value": { "value": 4 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.20 },
+              "tone": "positive",
+              "titles": ["🏗️ Turns Out They Are a 10x Builder"],
+              "messages": ["The skeptic quietly re-architects the whole operation and ships a data center that just works."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "grant_producer", "key": "datacenter", "count": 1 },
+                { "type": "grow_crowd", "factor": { "value": 1.05 } },
+                { "type": "add_consumers", "value": { "value": 8 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.20 },
+              "tone": "warning",
+              "titles": ["🚪 Gone in a Week"],
+              "messages": ["The skeptic reads the roadmap, says yeah no, and leaves after cashing a {{num .fee}}-token signing bonus."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.08 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "grant_producer", "key": "server", "count": 1 },
+                { "type": "grow_crowd", "factor": { "value": 0.9 } }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "middleclass",
+      "headline": "🧺 THE MIDDLE CLASS ARRIVES",
+      "chance": { "min": 0.014, "max": 0.018 },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 3000 } }
+      ],
+      "pitches": [
+        "A delegation of regulars shuffles in, clutching mason jars of savings. We used to be able to afford your eggs. Now we cannot afford the eggs or the rent. What happened?",
+        "A retiree, a teacher, and a line cook stand at the pond's edge and ask you to explain the mechanism."
+      ],
+      "options": [
+        {
+          "label": "Securitize their savings",
+          "desc": "Bundle their nest eggs into a product and sell it back to them.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.70 },
+              "tone": "positive",
+              "titles": ["🏦 Wealth, Transferred"],
+              "messages": ["You bundle their pensions into an egg-backed security and keep the spread. {{num .transfer}} tokens land on your side of the table."],
+              "values": [
+                {
+                  "key": "transfer",
+                  "value": {
+                    "op": "add",
+                    "args": [
+                      { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 90 }] },
+                      { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] },
+                      { "value": 200 }
+                    ]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "transfer" } },
+                { "type": "grow_crowd", "factor": { "value": 0.35 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.30 },
+              "tone": "warning",
+              "titles": ["🧨 Subprime Egg Crisis"],
+              "messages": ["The egg-backed securities were rated AAA by a friend of yours. You still net {{num .transfer}} tokens up front, but the rage that follows is expensive."],
+              "values": [
+                {
+                  "key": "transfer",
+                  "value": {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "op": "add",
+                        "args": [
+                          { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 90 }] },
+                          { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] },
+                          { "value": 200 }
+                        ]
+                      },
+                      { "value": 0.6 }
+                    ]
+                  }
+                },
+                { "key": "clawback", "value": { "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.20 }] } }
+              ],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "transfer" } },
+                { "type": "spend", "value": { "op": "var", "name": "clawback" } },
+                { "type": "grow_crowd", "factor": { "value": 0.3 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Actually help them",
+          "desc": "Eat the cost, cut prices, and prop up the regulars.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.55 },
+              "tone": "positive",
+              "titles": ["🤲 You Ate the Cost"],
+              "messages": ["You spend {{num .cost}} tokens making eggs affordable again and the middle class does not forget it."],
+              "values": [
+                { "key": "cost", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "cost" } },
+                { "type": "grow_crowd", "factor": { "value": 1.3 } },
+                { "type": "add_consumers", "value": { "value": 10 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.20 },
+              "tone": "positive",
+              "titles": ["📣 It Became a Movement"],
+              "messages": ["Your {{num .cost}}-token price cut becomes a folk story and a genuine crowd floods the pond."],
+              "values": [
+                { "key": "cost", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.15 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "cost" } },
+                { "type": "grow_crowd", "factor": { "value": 1.6 } },
+                { "type": "add_consumers", "value": { "value": 20 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "warning",
+              "titles": ["🕳️ A Bottomless Money Pit"],
+              "messages": ["Good intentions meet bad unit economics. The subsidy costs {{num .cost}} tokens and quietly remains unsustainable."],
+              "values": [
+                { "key": "cost", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.20 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "cost" } },
+                { "type": "grow_crowd", "factor": { "value": 1.1 } },
+                { "type": "add_consumers", "value": { "value": 6 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Blame the algorithm",
+          "desc": "Cite market forces and move on.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.50 },
+              "tone": "warning",
+              "titles": ["🤷 Market Forces"],
+              "messages": ["You shrug and say the algorithm decides prices now. You gain nothing and the crowd thins."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 0.7 } }]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "neutral",
+              "titles": ["😶 Nobody Notices, For Now"],
+              "messages": ["Busy, tired, and broke, the crowd mostly lets it slide this time."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 0.9 } }]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "negative",
+              "titles": ["🔥 The Op-Ed Went Viral"],
+              "messages": ["The Goose That Ate the Middle Class hits the front page with your quote in the headline."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 0.5 } }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "analyst",
+      "headline": "📊 A SELL-SIDE ANALYST APPEARS",
+      "chance": { "min": 0.013, "max": 0.017 },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 6000 } }
+      ],
+      "text": {
+        "name": [
+          "Chip Dunkford, Managing Director of Egg Equity Research",
+          "Tabitha Quill, sell-side and proud",
+          "Dr. Preston Vane, PhD in Narrative",
+          "the ax on the goose sector"
+        ]
+      },
+      "pitches": [
+        "{{.name}} clears a throat and flips to a slide with a single enormous number. Feed me a narrative and I will feed you a re-rating.",
+        "{{.name}} taps a laser pointer at a hockey-stick chart with no y-axis. I do not need the eggs to make money. I need the story to make sense in a hurry."
+      ],
+      "options": [
+        {
+          "label": "Feed them the narrative",
+          "desc": "Give the analyst the exclusive and total access.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.45 },
+              "tone": "positive",
+              "titles": ["📈 Initiated at Strong Buy"],
+              "messages": ["{{.name}} publishes a note that reads like fan fiction and {{num .gain}} tokens of momentum money pile in."],
+              "values": [
+                {
+                  "key": "gain",
+                  "value": {
+                    "op": "add",
+                    "args": [
+                      { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 45 }] },
+                      { "value": 400 }
+                    ]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "gain" } },
+                { "type": "shock_price", "factor": { "value": 1.25 } },
+                { "type": "grow_crowd", "factor": { "value": 1.2 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.30 },
+              "tone": "neutral",
+              "titles": ["😐 Initiated at Hold"],
+              "messages": ["{{.name}} hedges every sentence and lands on hold, constructive long-term. Nothing moves."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 0.99 } }]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "negative",
+              "titles": ["📉 Slapped With a Sell"],
+              "messages": ["You gave {{.name}} too much access and they actually did the model."],
+              "effects": [
+                { "type": "shock_price", "factor": { "value": 0.8 } },
+                { "type": "grow_crowd", "factor": { "value": 0.7 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Buy an ad in their newsletter",
+          "desc": "Quietly retain the analyst for sponsored coverage.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.60 },
+              "tone": "positive",
+              "titles": ["💵 Sponsored Coverage"],
+              "messages": ["A {{num .fee}}-token research retainer buys a glowing initiation and the crowd swells before the disclaimer loads."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.10 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "shock_price", "factor": { "value": 1.15 } },
+                { "type": "grow_crowd", "factor": { "value": 1.15 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.40 },
+              "tone": "warning",
+              "titles": ["🕵️ Paid For By In 4pt Font"],
+              "messages": ["Someone screenshots the disclosure. The {{num .fee}}-token retainer becomes the story."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.10 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "shock_price", "factor": { "value": 0.92 } },
+                { "type": "grow_crowd", "factor": { "value": 0.8 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Tell them to read the 10-K",
+          "desc": "Refuse to script the research.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.78 },
+              "tone": "neutral",
+              "titles": ["📚 Told Them to Read the 10-K"],
+              "messages": ["You hand {{.name}} the actual filing and decline to write their narrative for them."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 1.04 } }]
+            },
+            {
+              "weight": { "value": 0.22 },
+              "tone": "warning",
+              "titles": ["😤 Snubbed and Salty"],
+              "messages": ["{{.name}} takes the brush-off personally and puts out a valuation stretched note."],
+              "effects": [
+                { "type": "shock_price", "factor": { "value": 0.96 } },
+                { "type": "grow_crowd", "factor": { "value": 0.92 } }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "shortseller",
+      "headline": "🐻 A SHORT-SELLER PUBLISHES",
+      "chance": { "min": 0.010, "max": 0.014 },
+      "conditions": [
+        { "left": { "op": "state", "name": "total_earned" }, "op": "gt", "right": { "value": 10000 } }
+      ],
+      "text": {
+        "name": [
+          "Muddy Pond Research",
+          "Hindengoose",
+          "@eggsposed",
+          "Citron-Adjacent Capital"
+        ]
+      },
+      "pitches": [
+        "{{.name}} drops a 100-page report titled THE GOOSE IS COOKED and says the eggs are a Ponzi.",
+        "{{.name}} publishes drone footage of your allegedly humming data center sitting dark and suggests you hold on to something."
+      ],
+      "options": [
+        {
+          "label": "Say nothing and stay the course",
+          "desc": "Refuse to dignify it.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.35 },
+              "tone": "neutral",
+              "titles": ["🥱 The Report Fizzles"],
+              "messages": ["{{.name}} posts the thread on a slow news day and it sinks under a celebrity divorce."],
+              "effects": [{ "type": "grow_crowd", "factor": { "value": 0.98 } }]
+            },
+            {
+              "weight": { "value": 0.40 },
+              "tone": "negative",
+              "titles": ["🩸 The Short Report Lands"],
+              "messages": ["{{.name}}'s report hits the mainstream feeds and the confident duck line becomes a meme."],
+              "effects": [
+                { "type": "shock_price", "factor": { "value": 0.7 } },
+                { "type": "grow_crowd", "factor": { "value": 0.6 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.25 },
+              "tone": "positive",
+              "titles": ["🚀 Short Squeeze"],
+              "messages": ["The report is sloppy, the faithful mobilize, and {{num .gain}} tokens of vengeful FOMO roll in."],
+              "values": [
+                {
+                  "key": "gain",
+                  "value": {
+                    "op": "add",
+                    "args": [
+                      { "op": "mul", "args": [{ "op": "state", "name": "tokens_per_second" }, { "value": 30 }] },
+                      { "value": 250 }
+                    ]
+                  }
+                }
+              ],
+              "effects": [
+                { "type": "earn", "value": { "op": "var", "name": "gain" } },
+                { "type": "shock_price", "factor": { "value": 1.3 } },
+                { "type": "grow_crowd", "factor": { "value": 1.25 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Rebut with a 100-page counter-deck",
+          "desc": "Pay to fight fire with fire.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.40 },
+              "tone": "positive",
+              "titles": ["📑 Rebuttal Lands"],
+              "messages": ["Your {{num .fee}}-token counter-deck is dense, dull, and devastating."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.08 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "shock_price", "factor": { "value": 1.1 } },
+                { "type": "grow_crowd", "factor": { "value": 1.05 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.30 },
+              "tone": "neutral",
+              "titles": ["🤝 Fought to a Draw"],
+              "messages": ["You spend {{num .fee}} tokens rebutting and the whole thing curdles into both sides have a point."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.08 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "grow_crowd", "factor": { "value": 0.97 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.30 },
+              "tone": "negative",
+              "titles": ["📢 Streisand Effect"],
+              "messages": ["Your {{num .fee}}-token rebuttal introduces the report to everyone who had missed it."],
+              "values": [
+                { "key": "fee", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.08 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "fee" } },
+                { "type": "shock_price", "factor": { "value": 0.75 } },
+                { "type": "grow_crowd", "factor": { "value": 0.55 } }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Settle it quietly",
+          "desc": "Pay the short-seller to cover and go away.",
+          "outcomes": [
+            {
+              "weight": { "value": 0.60 },
+              "tone": "neutral",
+              "titles": ["🤐 Quietly Settled"],
+              "messages": ["A {{num .hush}}-token consulting arrangement later, {{.name}} deletes the thread and covers the position."],
+              "values": [
+                { "key": "hush", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.12 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "hush" } },
+                { "type": "grow_crowd", "factor": { "value": 0.98 } }
+              ]
+            },
+            {
+              "weight": { "value": 0.40 },
+              "tone": "negative",
+              "titles": ["💧 The Hush Money Leaked"],
+              "messages": ["The {{num .hush}}-token payment ends up in a follow-up report titled THEY PAID US TO STOP."],
+              "values": [
+                { "key": "hush", "value": { "op": "affordable", "args": [{ "op": "mul", "args": [{ "op": "state", "name": "tokens" }, { "value": 0.12 }] }] } }
+              ],
+              "effects": [
+                { "type": "spend", "value": { "op": "var", "name": "hush" } },
+                { "type": "shock_price", "factor": { "value": 0.8 } },
+                { "type": "grow_crowd", "factor": { "value": 0.6 } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

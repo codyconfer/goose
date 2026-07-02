@@ -11,6 +11,8 @@ import (
 
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
+	"github.com/codyconfer/goose/internal/world"
+	"github.com/codyconfer/goose/internal/worldgen"
 )
 
 type FileStore struct{ Path string }
@@ -18,6 +20,7 @@ type FileStore struct{ Path string }
 type fileSave struct {
 	Economy economy.State `json:"economy"`
 	Events  events.State  `json:"events"`
+	World   world.State   `json:"world,omitempty"`
 }
 
 type fileSaveSlot struct {
@@ -27,6 +30,7 @@ type fileSaveSlot struct {
 	UpdatedAt int64         `json:"updated_at"`
 	Economy   economy.State `json:"economy"`
 	Events    events.State  `json:"events"`
+	World     world.State   `json:"world,omitempty"`
 }
 
 type fileSaveCollection struct {
@@ -44,7 +48,7 @@ func savePath() string {
 	return filepath.Join(home, ".goose", "save.json")
 }
 
-func (fs FileStore) Create(name string, s *economy.Machine, ev *events.Machine) (SaveInfo, error) {
+func (fs FileStore) Create(name string, s *economy.Machine, ev *events.Machine, wrld *world.State) (SaveInfo, error) {
 	coll, err := fs.readCollection()
 	if err != nil {
 		return SaveInfo{}, err
@@ -68,6 +72,7 @@ func (fs FileStore) Create(name string, s *economy.Machine, ev *events.Machine) 
 		UpdatedAt: now,
 		Economy:   s.Get(),
 		Events:    ev.Get(),
+		World:     normalizeWorld(wrld),
 	}
 	coll.NextID = id + 1
 	coll.Saves = append(coll.Saves, slot)
@@ -77,20 +82,24 @@ func (fs FileStore) Create(name string, s *economy.Machine, ev *events.Machine) 
 	return summarize(slot.ID, slot.Name, slot.CreatedAt, slot.UpdatedAt, slot.Economy), nil
 }
 
-func (fs FileStore) Read(id int64) (*economy.Machine, *events.Machine, error) {
+func (fs FileStore) Read(id int64) (*economy.Machine, *events.Machine, *world.State, error) {
 	coll, err := fs.readCollection()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	for _, slot := range coll.Saves {
 		if slot.ID == id {
-			return economy.FromState(slot.Economy), events.FromState(slot.Events), nil
+			wrld := slot.World
+			if len(wrld.Events) == 0 && len(wrld.Characters) == 0 {
+				wrld = *worldgen.Generate(worldgen.DefaultSeed)
+			}
+			return economy.FromState(slot.Economy), events.FromState(slot.Events), &wrld, nil
 		}
 	}
-	return nil, nil, ErrSaveNotFound
+	return nil, nil, nil, ErrSaveNotFound
 }
 
-func (fs FileStore) Write(id int64, s *economy.Machine, ev *events.Machine) error {
+func (fs FileStore) Write(id int64, s *economy.Machine, ev *events.Machine, wrld *world.State) error {
 	coll, err := fs.readCollection()
 	if err != nil {
 		return err
@@ -99,6 +108,7 @@ func (fs FileStore) Write(id int64, s *economy.Machine, ev *events.Machine) erro
 		if coll.Saves[i].ID == id {
 			coll.Saves[i].Economy = s.Get()
 			coll.Saves[i].Events = ev.Get()
+			coll.Saves[i].World = normalizeWorld(wrld)
 			coll.Saves[i].UpdatedAt = time.Now().Unix()
 			return fs.writeCollection(coll)
 		}
@@ -196,6 +206,7 @@ func (fs FileStore) readCollection() (fileSaveCollection, error) {
 			UpdatedAt: now,
 			Economy:   legacy.Economy,
 			Events:    legacy.Events,
+			World:     normalizeWorld(&legacy.World),
 		}},
 	}
 	coll.normalize()
@@ -237,4 +248,11 @@ func (coll fileSaveCollection) hasName(name string, exceptID int64) bool {
 		}
 	}
 	return false
+}
+
+func normalizeWorld(wrld *world.State) world.State {
+	if wrld == nil || (len(wrld.Events) == 0 && len(wrld.Characters) == 0) {
+		return *worldgen.Generate(worldgen.DefaultSeed)
+	}
+	return *wrld
 }

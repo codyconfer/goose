@@ -12,11 +12,14 @@ import (
 	"github.com/codyconfer/goose/internal/events"
 	"github.com/codyconfer/goose/internal/notify"
 	"github.com/codyconfer/goose/internal/store"
+	"github.com/codyconfer/goose/internal/world"
+	"github.com/codyconfer/goose/internal/worldgen"
 )
 
 type Model struct {
 	econ    *economy.Machine
 	events  *events.Machine
+	world   *world.State
 	items   []capexItem
 	rng     *rand.Rand
 	clock   clock
@@ -48,6 +51,7 @@ func New(s *economy.Machine, ev *events.Machine, offline float64) Model {
 	m := Model{
 		econ:    s,
 		events:  ev,
+		world:   worldgen.Generate(worldgen.DefaultSeed),
 		items:   capexItems(),
 		offline: offline,
 		clock:   newClock(time.Now()),
@@ -163,7 +167,7 @@ func (m *Model) beatMid() {
 		return
 	}
 
-	if out, ok := m.events.Roll(m.econ.Get(), m.rng); ok {
+	if out, ok := m.events.Roll(m.world.Events, m.econ.Get(), m.rng); ok {
 		m.econ.ApplyWindfall(out.Notif.Title, out.Cmds)
 		m.notifs.Push(out.Notif, notifBeats)
 	}
@@ -183,7 +187,7 @@ func (m *Model) beatChars() {
 	if m.econ.Get().Frozen() {
 		return
 	}
-	if ch, ok := characters.Roll(m.econ.Get(), m.rng); ok {
+	if ch, ok := characters.Roll(m.world.Characters, m.econ.Get(), m.rng); ok {
 		m.screen = &characterScreen{char: &ch, prev: gs}
 	}
 }
@@ -248,7 +252,7 @@ func (m *Model) syncPriceChart() {
 func (m *Model) save() error {
 	m.syncPriceChart()
 	if m.saveID <= 0 {
-		info, err := store.CreateSave(m.nextSaveName(), m.econ, m.events)
+		info, err := store.CreateSave(m.nextSaveName(), m.econ, m.events, m.world)
 		if err != nil {
 			return err
 		}
@@ -256,7 +260,7 @@ func (m *Model) save() error {
 		m.saveName = info.Name
 		return nil
 	}
-	return store.Save(m.saveID, m.econ, m.events)
+	return store.Save(m.saveID, m.econ, m.events, m.world)
 }
 
 func (m *Model) nextSaveName() string {

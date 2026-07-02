@@ -10,6 +10,8 @@ import (
 
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
+	"github.com/codyconfer/goose/internal/world"
+	"github.com/codyconfer/goose/internal/worldgen"
 
 	_ "modernc.org/sqlite"
 )
@@ -22,6 +24,7 @@ CREATE TABLE IF NOT EXISTS saves (
     name       TEXT    NOT NULL COLLATE NOCASE UNIQUE,
     economy    TEXT    NOT NULL,
     events     TEXT    NOT NULL,
+    world      TEXT    NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -80,6 +83,10 @@ func (ss SQLiteStore) open() (*sql.DB, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	if err := ensureWorldColumn(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	if err := migrateLegacyFlock(db); err != nil {
 		_ = db.Close()
 		return nil, err
@@ -87,7 +94,7 @@ func (ss SQLiteStore) open() (*sql.DB, error) {
 	return db, nil
 }
 
-func (ss SQLiteStore) Create(name string, s *economy.Machine, ev *events.Machine) (SaveInfo, error) {
+func (ss SQLiteStore) Create(name string, s *economy.Machine, ev *events.Machine, wrld *world.State) (SaveInfo, error) {
 	db, err := ss.open()
 	if err != nil {
 		return SaveInfo{}, err
@@ -98,13 +105,13 @@ func (ss SQLiteStore) Create(name string, s *economy.Machine, ev *events.Machine
 	if name == "" {
 		return SaveInfo{}, errors.New("save name cannot be empty")
 	}
-	econJSON, eventsJSON, err := marshalSave(s, ev)
+	econJSON, eventsJSON, worldJSON, err := marshalSave(s, ev, wrld)
 	if err != nil {
 		return SaveInfo{}, err
 	}
 	now := time.Now().Unix()
-	res, err := db.Exec(`INSERT INTO saves (name, economy, events, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?)`, name, econJSON, eventsJSON, now, now)
+	res, err := db.Exec(`INSERT INTO saves (name, economy, events, world, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)`, name, econJSON, eventsJSON, worldJSON, now, now)
 	if err != nil {
 		return SaveInfo{}, err
 	}
@@ -115,38 +122,38 @@ func (ss SQLiteStore) Create(name string, s *economy.Machine, ev *events.Machine
 	return summarize(id, name, now, now, s.Get()), nil
 }
 
-func (ss SQLiteStore) Read(id int64) (*economy.Machine, *events.Machine, error) {
+func (ss SQLiteStore) Read(id int64) (*economy.Machine, *events.Machine, *world.State, error) {
 	db, err := ss.open()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	defer func() { _ = db.Close() }()
 
-	var econJSON, eventsJSON string
-	err = db.QueryRow(`SELECT economy, events FROM saves WHERE id = ?`, id).Scan(&econJSON, &eventsJSON)
+	var econJSON, eventsJSON, worldJSON string
+	err = db.QueryRow(`SELECT economy, events, world FROM saves WHERE id = ?`, id).Scan(&econJSON, &eventsJSON, &worldJSON)
 	if err == sql.ErrNoRows {
-		return nil, nil, ErrSaveNotFound
+		return nil, nil, nil, ErrSaveNotFound
 	}
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return unmarshalSave(econJSON, eventsJSON)
+	return unmarshalSave(econJSON, eventsJSON, worldJSON)
 }
 
-func (ss SQLiteStore) Write(id int64, s *economy.Machine, ev *events.Machine) error {
+func (ss SQLiteStore) Write(id int64, s *economy.Machine, ev *events.Machine, wrld *world.State) error {
 	db, err := ss.open()
 	if err != nil {
 		return err
 	}
 	defer func() { _ = db.Close() }()
 
-	econJSON, eventsJSON, err := marshalSave(s, ev)
+	econJSON, eventsJSON, worldJSON, err := marshalSave(s, ev, wrld)
 	if err != nil {
 		return err
 	}
 	res, err := db.Exec(`UPDATE saves
-        SET economy = ?, events = ?, updated_at = ?
-        WHERE id = ?`, econJSON, eventsJSON, time.Now().Unix(), id)
+        SET economy = ?, events = ?, world = ?, updated_at = ?
+        WHERE id = ?`, econJSON, eventsJSON, worldJSON, time.Now().Unix(), id)
 	if err != nil {
 		return err
 	}
@@ -232,14 +239,6 @@ func (ss SQLiteStore) Exists() bool {
 }
 
 func migrateLegacyFlock(db *sql.DB) error {
-	var saveCount int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM saves`).Scan(&saveCount); err != nil {
-		return err
-	}
-	if saveCount > 0 {
-		return nil
-	}
-
 	var legacyCount int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'flock'`).Scan(&legacyCount); err != nil {
 		return err
@@ -247,6 +246,16 @@ func migrateLegacyFlock(db *sql.DB) error {
 	if legacyCount == 0 {
 		return nil
 	}
+
+	var saveCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM saves`).Scan(&saveCount); err != nil {
+		return err
+	}
+	if saveCount > 0 {
+		_, err := db.Exec(`DROP TABLE flock`)
+		return err
+	}
+
 	for _, mig := range legacyMigrations {
 		_, _ = db.Exec(mig)
 	}
@@ -255,7 +264,7 @@ func migrateLegacyFlock(db *sql.DB) error {
 	if err != nil || !ok {
 		return err
 	}
-	econJSON, eventsJSON, err := marshalSave(econ, ev)
+	econJSON, eventsJSON, worldJSON, err := marshalSave(econ, ev, worldgen.Generate(worldgen.DefaultSeed))
 	if err != nil {
 		return err
 	}
@@ -264,8 +273,12 @@ func migrateLegacyFlock(db *sql.DB) error {
 	if updatedAt <= 0 {
 		updatedAt = now
 	}
-	_, err = db.Exec(`INSERT INTO saves (name, economy, events, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?)`, NextSaveName(nil), econJSON, eventsJSON, updatedAt, updatedAt)
+	_, err = db.Exec(`INSERT INTO saves (name, economy, events, world, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)`, NextSaveName(nil), econJSON, eventsJSON, worldJSON, updatedAt, updatedAt)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(`DROP TABLE flock`)
 	return err
 }
 
@@ -309,28 +322,41 @@ func readLegacyFlock(db *sql.DB) (*economy.Machine, *events.Machine, bool, error
 	return economy.FromState(s), events.FromState(ev), true, nil
 }
 
-func marshalSave(s *economy.Machine, ev *events.Machine) (string, string, error) {
+func marshalSave(s *economy.Machine, ev *events.Machine, wrld *world.State) (string, string, string, error) {
 	econJSON, err := json.Marshal(s.Get())
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	eventsJSON, err := json.Marshal(ev.Get())
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
-	return string(econJSON), string(eventsJSON), nil
+	worldJSON, err := json.Marshal(normalizeSQLiteWorld(wrld))
+	if err != nil {
+		return "", "", "", err
+	}
+	return string(econJSON), string(eventsJSON), string(worldJSON), nil
 }
 
-func unmarshalSave(econJSON, eventsJSON string) (*economy.Machine, *events.Machine, error) {
+func unmarshalSave(econJSON, eventsJSON, worldJSON string) (*economy.Machine, *events.Machine, *world.State, error) {
 	s := economy.NewState()
 	ev := events.NewState()
+	wrld := normalizeSQLiteWorld(nil)
 	if err := json.Unmarshal([]byte(econJSON), &s); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if err := json.Unmarshal([]byte(eventsJSON), &ev); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return economy.FromState(s), events.FromState(ev), nil
+	if worldJSON != "" {
+		if err := json.Unmarshal([]byte(worldJSON), &wrld); err != nil {
+			return nil, nil, nil, err
+		}
+	}
+	if len(wrld.Events) == 0 && len(wrld.Characters) == 0 {
+		wrld = normalizeSQLiteWorld(nil)
+	}
+	return economy.FromState(s), events.FromState(ev), &wrld, nil
 }
 
 func requireAffected(res sql.Result) error {
@@ -342,4 +368,46 @@ func requireAffected(res sql.Result) error {
 		return ErrSaveNotFound
 	}
 	return nil
+}
+
+func ensureWorldColumn(db *sql.DB) error {
+	rows, err := db.Query(`PRAGMA table_info(saves)`)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var (
+		cid      int
+		name     string
+		typeName string
+		notNull  int
+		defaultV sql.NullString
+		primaryK int
+		hasWorld bool
+	)
+	for rows.Next() {
+		if err := rows.Scan(&cid, &name, &typeName, &notNull, &defaultV, &primaryK); err != nil {
+			return err
+		}
+		if name == "world" {
+			hasWorld = true
+			break
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if hasWorld {
+		return nil
+	}
+	_, err = db.Exec(`ALTER TABLE saves ADD COLUMN world TEXT NOT NULL DEFAULT ''`)
+	return err
+}
+
+func normalizeSQLiteWorld(wrld *world.State) world.State {
+	if wrld == nil || (len(wrld.Events) == 0 && len(wrld.Characters) == 0) {
+		return *worldgen.Generate(worldgen.DefaultSeed)
+	}
+	return *wrld
 }

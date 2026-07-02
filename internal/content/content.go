@@ -263,7 +263,6 @@ var (
 	Balance    balanceData
 	Tuning     tuningData
 	Text       textData
-	Events     eventsData
 	Settings   settingsData
 )
 
@@ -275,8 +274,8 @@ func init() {
 	mustLoad("data/balance.json", &Balance)
 	mustLoad("data/tuning.json", &Tuning)
 	mustLoad("data/text.json", &Text)
-	mustLoad("data/events.json", &Events)
 	mustLoad("data/settings.json", &Settings)
+	mustLoad("data/encounters.json", &Narrative)
 }
 
 func mustLoad(name string, dst any) {

@@ -14,6 +14,7 @@ import (
 	"github.com/codyconfer/goose/internal/events"
 	"github.com/codyconfer/goose/internal/notify"
 	"github.com/codyconfer/goose/internal/store"
+	"github.com/codyconfer/goose/internal/worldgen"
 )
 
 func key(s string) tea.KeyMsg {
@@ -49,6 +50,17 @@ func maxLineWidth(s string) int {
 		}
 	}
 	return max
+}
+
+func mustBuildCharacter(t *testing.T, m Model, key string, s economy.State) characters.Character {
+	t.Helper()
+	for _, spec := range m.world.Characters {
+		if spec.Key == key {
+			return spec.Build(s)
+		}
+	}
+	t.Fatalf("missing character %q", key)
+	return characters.Character{}
 }
 
 func TestTapEarnsTokens(t *testing.T) {
@@ -154,6 +166,44 @@ func TestMenuStartNewGame(t *testing.T) {
 	}
 }
 
+func TestMenuDeletesSaveCreatedThroughNewGameFlow(t *testing.T) {
+	isolateHome(t)
+
+	m := NewMenu()
+	m = send(m, key("enter"))
+	if _, ok := m.screen.(*settingsScreen); !ok {
+		t.Fatalf("after New, screen=%T, want *settingsScreen", m.screen)
+	}
+	m = send(m, key("enter"))
+	if m.saveID <= 0 {
+		t.Fatalf("new game did not create a save: id=%d", m.saveID)
+	}
+
+	m = NewMenu()
+	ms, ok := m.screen.(*menuScreen)
+	if !ok {
+		t.Fatalf("menu screen=%T, want *menuScreen", m.screen)
+	}
+	if len(ms.items) == 0 || ms.items[0].action != menuSave {
+		t.Fatalf("menu items=%+v, want first item to be a save", ms.items)
+	}
+
+	m = send(m, key("x"))
+	ms = m.screen.(*menuScreen)
+	if ms.mode != menuModeDelete {
+		t.Fatalf("menu mode=%v, want delete confirmation", ms.mode)
+	}
+	m = send(m, key("y"))
+
+	saves, err := store.ListSaves()
+	if err != nil {
+		t.Fatalf("list after delete: %v", err)
+	}
+	if len(saves) != 0 {
+		t.Fatalf("delete left saves=%+v", saves)
+	}
+}
+
 func TestSettingsScreenAppliesPacing(t *testing.T) {
 	isolateHome(t)
 	m := NewMenu()
@@ -211,7 +261,7 @@ func TestMenuManagesNamedSaves(t *testing.T) {
 	isolateHome(t)
 	state := economy.NewState()
 	state.Tokens = 99
-	info, err := store.CreateSave("Alpha", economy.FromState(state), events.NewMachine())
+	info, err := store.CreateSave("Alpha", economy.FromState(state), events.NewMachine(), worldgen.Generate(worldgen.DefaultSeed))
 	if err != nil {
 		t.Fatalf("create save: %v", err)
 	}
@@ -258,7 +308,7 @@ func TestVCFlowResolveAndDismiss(t *testing.T) {
 	s.Tokens = 5000
 	s.TotalEarned = 5000
 	m := New(economy.FromState(s), events.NewMachine(), 0)
-	ch := characters.NewVC(m.econ.Get(), m.rng)
+	ch := mustBuildCharacter(t, m, "vc", m.econ.Get())
 	prev := &gameScreen{cursor: 2}
 	m.screen = &characterScreen{char: &ch, prev: prev}
 
@@ -294,7 +344,7 @@ func TestViewRendersEveryScreen(t *testing.T) {
 
 	s := economy.NewState()
 	s.Tokens = 5000
-	ch := characters.NewVC(s, g.rng)
+	ch := mustBuildCharacter(t, g, "vc", s)
 	g.screen = &characterScreen{char: &ch, prev: &gameScreen{}}
 	if !strings.Contains(g.View(), "VENTURE CAPITALIST") {
 		t.Error("character view missing header")
@@ -311,7 +361,7 @@ func TestNarrowMenuViewBoundsLongSaveNames(t *testing.T) {
 	name := strings.Repeat("LongSaveName", 8)
 	state := economy.NewState()
 	state.Tokens = 42
-	if _, err := store.CreateSave(name, economy.FromState(state), events.NewMachine()); err != nil {
+	if _, err := store.CreateSave(name, economy.FromState(state), events.NewMachine(), worldgen.Generate(worldgen.DefaultSeed)); err != nil {
 		t.Fatalf("create save: %v", err)
 	}
 

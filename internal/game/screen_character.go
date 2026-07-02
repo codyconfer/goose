@@ -70,7 +70,7 @@ func (cs *characterScreen) view(m *Model) string {
 	vk := m.frame()
 	cursor := panels.ClampIndex(cs.cursor, len(cs.char.Options))
 	var b strings.Builder
-	b.WriteString(vk.Header(cs.char.Type.Headline()))
+	b.WriteString(vk.Header(cs.char.Headline))
 	b.WriteString("\n\n")
 	b.WriteString(vk.Box(cs.char.Pitch))
 	b.WriteString("\n\n")
