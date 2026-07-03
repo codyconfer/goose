@@ -1,23 +1,20 @@
 package panels
 
-// Tier is a discrete terminal-height band. Panels declare the smallest tier at
-// which they appear, so each band shows an explicitly authored set rather than
-// whatever a measure-and-drop pass happens to leave.
+import "github.com/codyconfer/goose/internal/game/viewkit/theme"
+
 type Tier int
 
 const (
-	TierShort  Tier = iota // cramped: bare essentials only (zero value)
-	TierMedium             // minimum-supported height: biggest panels drop
-	TierTall               // spacious: every panel shows
+	TierShort Tier = iota
+	TierMedium
+	TierTall
 )
 
 type Section struct {
 	Content string
-	MinTier Tier // smallest tier at which this section appears; zero = always
+	MinTier Tier
 }
 
-// StackFit keeps the sections visible at tier (nested: short ⊆ medium ⊆ tall)
-// and stacks them. Overflow within a tier is left to the viewport to clip.
 func StackFit(tier Tier, sections ...Section) string {
 	contents := make([]string, 0, len(sections))
 	for _, s := range sections {
@@ -26,4 +23,51 @@ func StackFit(tier Tier, sections ...Section) string {
 		}
 	}
 	return Stack(contents...)
+}
+
+func BodyBudget(height int) int {
+	if height <= 0 {
+		return theme.MinBodyHeight - theme.AppMarginY*2
+	}
+	rows := height - theme.AppMarginY*2
+	if rows < 1 {
+		rows = 1
+	}
+	return rows
+}
+
+func ContentRows(height int) int {
+	if height <= 0 {
+		return 0
+	}
+	rows := height - theme.AppMarginY*2
+	if rows < 1 {
+		rows = 1
+	}
+	return rows
+}
+
+func TierForHeight(height int) Tier {
+	rows := BodyBudget(height)
+	switch {
+	case rows >= theme.TallBodyHeight-theme.AppMarginY*2:
+		return TierTall
+	case rows >= theme.MinBodyHeight-theme.AppMarginY*2:
+		return TierMedium
+	default:
+		return TierShort
+	}
+}
+
+type TierRows struct{ Short, Medium, Tall int }
+
+func (r TierRows) At(t Tier) int {
+	switch t {
+	case TierTall:
+		return r.Tall
+	case TierMedium:
+		return r.Medium
+	default:
+		return r.Short
+	}
 }

@@ -112,7 +112,11 @@ func TestViewportFitsRequestedRows(t *testing.T) {
 	if len(lines) != 4 {
 		t.Fatalf("viewport lines=%d, want 4", len(lines))
 	}
-	if !strings.Contains(out, "2–4 of 5") {
+
+	if !strings.Contains(out, "2–3 of 5") {
 		t.Fatalf("viewport missing footer:\n%s", out)
+	}
+	if lines[len(lines)-2] != "" {
+		t.Fatalf("expected a blank margin line above the hint:\n%s", out)
 	}
 }

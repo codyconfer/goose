@@ -10,7 +10,7 @@ import (
 
 type Frame struct {
 	Width   int
-	Focused bool // draw the panel border highlighted to mark keyboard focus
+	Focused bool
 }
 
 func NewFrame(width int) Frame {
@@ -23,7 +23,6 @@ func NewFrame(width int) Frame {
 	return Frame{Width: width}
 }
 
-// Focus returns a copy of the frame that renders panels with the focused border.
 func (f Frame) Focus() Frame {
 	f.Focused = true
 	return f
@@ -145,6 +144,20 @@ func ProgressBar(frac float64, width int) string {
 
 func Meter(frac float64, width int) string {
 	return "[" + ProgressBar(frac, width) + "]"
+}
+
+func MeterWidth(frameWidth, desired int) int {
+	if desired < 1 {
+		return 1
+	}
+	max := frameWidth / 3
+	if max < 8 {
+		max = 8
+	}
+	if desired > max {
+		return max
+	}
+	return desired
 }
 
 func HintLine(pairs ...[2]string) string {

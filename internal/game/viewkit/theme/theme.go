@@ -7,8 +7,8 @@ const (
 	MinBodyWidth = 24
 
 	MinScreenWidth     = 80
-	MinBodyHeight      = 35 // minimum well-supported height (Medium tier floor)
-	TallBodyHeight     = 46 // at/above this height, every panel shows (Tall tier)
+	MinBodyHeight      = 35
+	TallBodyHeight     = 46
 	AppMarginY         = 1
 	AppMarginX         = 2
 	ScreenPaddingWidth = AppMarginX*2 + 4

@@ -142,7 +142,7 @@ func TestSpecDeskScrollsPositionsAndClosesVisibleEntry(t *testing.T) {
 	if ss.positions.Offset == 0 {
 		t.Fatal("focused positions scroll did not advance the offset")
 	}
-	if got := m.View(); !strings.Contains(got, "5–12 of 12") {
+	if got := m.View(); !strings.Contains(got, "7–12 of 12") {
 		t.Fatalf("positions footer missing scrolled range:\n%s", got)
 	}
 
@@ -150,7 +150,7 @@ func TestSpecDeskScrollsPositionsAndClosesVisibleEntry(t *testing.T) {
 	if len(m.econ.Get().Positions) != 11 {
 		t.Fatalf("positions len=%d, want 11 after close", len(m.econ.Get().Positions))
 	}
-	if got := m.econ.Get().Positions[4].Premium; got != 60 {
-		t.Fatalf("visible close removed wrong position, premium at index 4=%v, want 60", got)
+	if got := m.econ.Get().Positions[4].Premium; got != 50 {
+		t.Fatalf("visible close removed wrong position, premium at index 4=%v, want 50", got)
 	}
 }

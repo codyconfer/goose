@@ -257,7 +257,7 @@ func renderFlow(m *Model) string {
 		{Label: content.Text.Trade.FlowSelling, Value: m.sellRate},
 		{Label: content.Text.Trade.FlowDemand, Value: s.Demand()},
 	}
-	return vk.Bar(content.Text.Trade.FlowPanel, data, meterWidth(vk.Width, 40), economy.FormatNum, "")
+	return vk.Bar(content.Text.Trade.FlowPanel, data, panels.MeterWidth(vk.Width, 40), economy.FormatNum, "")
 }
 
 func toOHLC(cs []candle) []panels.OHLC {
@@ -334,13 +334,13 @@ func tradeCompletedMsg(o economy.Transaction) string {
 const feedHistory = 50
 
 var (
-	capexRows    = tierRows{short: 4, medium: 8, tall: 14}
-	ledgerRows   = tierRows{short: 3, medium: 8, tall: 12}
-	pnlRows      = tierRows{short: 3, medium: 8, tall: 12}
-	positionRows = tierRows{short: 3, medium: 8, tall: 12}
-	queueRows    = tierRows{short: 3, medium: 8, tall: 12}
-	agentRows    = tierRows{short: 4, medium: 8, tall: 14}
-	feedRows     = tierRows{short: 3, medium: 5, tall: 8}
+	capexRows    = panels.TierRows{Short: 4, Medium: 6, Tall: 14}
+	ledgerRows   = panels.TierRows{Short: 3, Medium: 6, Tall: 12}
+	pnlRows      = panels.TierRows{Short: 3, Medium: 6, Tall: 12}
+	positionRows = panels.TierRows{Short: 3, Medium: 6, Tall: 12}
+	queueRows    = panels.TierRows{Short: 3, Medium: 6, Tall: 12}
+	agentRows    = panels.TierRows{Short: 4, Medium: 6, Tall: 14}
+	feedRows     = panels.TierRows{Short: 3, Medium: 5, Tall: 8}
 )
 
 func renderLedger(m *Model, sv panels.ScrollState, focused bool) string {

@@ -297,7 +297,7 @@ func (ss *specScreen) renderPnL(m *Model) string {
 		desc := fmt.Sprintf("%.0fx %s", p.Leverage, specWord(p.Kind))
 		data[i] = panels.Datum{Label: desc, Value: p.PnL(price)}
 	}
-	return vk.BarScroll(content.Text.Spec.PnlPanel, data, meterWidth(vk.Width, 40), economy.FormatNum, content.Text.Spec.PositionsEmpty, m.panelRows(pnlRows), ss.positions.Offset)
+	return vk.BarScroll(content.Text.Spec.PnlPanel, data, panels.MeterWidth(vk.Width, 40), economy.FormatNum, content.Text.Spec.PositionsEmpty, m.panelRows(pnlRows), ss.positions.Offset)
 }
 
 func specWord(k economy.PosKind) string {

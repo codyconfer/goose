@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 	"math"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -22,7 +21,7 @@ func (m Model) View() string {
 	if !panels.FitsScreenWidth(m.width) {
 		return theme.AppFrame.Render(panels.TooNarrow(m.width))
 	}
-	return theme.AppFrame.Render(m.layoutViewport(m.screen.view(&m)))
+	return theme.AppFrame.Render(panels.ViewportLayout(m.screen.view(&m), panels.ContentRows(m.height), m.pageScroll))
 }
 
 func (m Model) frame() panels.Frame {
@@ -52,7 +51,7 @@ func (m Model) renderStatus() string {
 		le := s.LevelEggs()
 		prev := s.LevelFloor()
 		frac := (le - prev) / (next - prev)
-		progress = panels.Meter(frac, meterWidth(vk.Width, 22)) +
+		progress = panels.Meter(frac, panels.MeterWidth(vk.Width, 22)) +
 			theme.DimSty.Render("  "+fmt.Sprintf(content.Text.Status.ProgressFmt, economy.FormatNum(le), economy.FormatNum(next), lvl+1))
 	} else {
 		progress = theme.EggSty.Render("★ ") + theme.DimSty.Render(content.Text.Status.MaxLevel)
@@ -195,125 +194,20 @@ func notificationCard(title, message string, tone notify.Tone, width int) string
 	return sty.Render(body)
 }
 
-func meterWidth(frameWidth, desired int) int {
-	if desired < 1 {
-		return 1
-	}
-	max := frameWidth / 3
-	if max < 8 {
-		max = 8
-	}
-	if desired > max {
-		return max
-	}
-	return desired
-}
+func (m Model) heightTier() panels.Tier { return panels.TierForHeight(m.height) }
 
-func (m Model) viewportRows() int {
-	if m.height <= 0 {
-		return 0
-	}
-	rows := m.height - theme.AppMarginY*2
-	if rows < 1 {
-		return 1
-	}
-	return rows
-}
-
-// bodyBudget is the row budget a screen should fit its panels into. Unlike
-// viewportRows it falls back to the minimum supported height when the terminal
-// size is not yet known, so the first frame targets the design minimum rather
-// than dumping every panel.
-func (m Model) bodyBudget() int {
-	if m.height <= 0 {
-		return theme.MinBodyHeight - theme.AppMarginY*2
-	}
-	rows := m.height - theme.AppMarginY*2
-	if rows < 1 {
-		rows = 1
-	}
-	return rows
-}
-
-// heightTier maps the current body budget to a discrete layout tier. Screens
-// use it to pick which panels are worth showing; the viewport still clips any
-// overflow within the chosen tier. The unknown-height fallback in bodyBudget
-// lands in Medium, so the first frame shows the minimum-supported layout.
-func (m Model) heightTier() panels.Tier {
-	rows := m.bodyBudget()
-	switch {
-	case rows >= theme.TallBodyHeight-theme.AppMarginY*2:
-		return panels.TierTall
-	case rows >= theme.MinBodyHeight-theme.AppMarginY*2:
-		return panels.TierMedium
-	default:
-		return panels.TierShort
-	}
-}
-
-// tierRows is how many items a scroll panel shows at each height tier — fewer on
-// cramped screens, more when there's room.
-type tierRows struct{ short, medium, tall int }
-
-// panelRows resolves a tierRows to a concrete count for the current height tier.
-func (m Model) panelRows(r tierRows) int {
-	switch m.heightTier() {
-	case panels.TierTall:
-		return r.tall
-	case panels.TierMedium:
-		return r.medium
-	default:
-		return r.short
-	}
-}
-
-func (m Model) layoutViewport(body string) string {
-	rows := m.viewportRows()
-	if rows <= 0 {
-		return body
-	}
-
-	content, footer := splitStickyFooter(body)
-	if footer == "" {
-		return panels.Viewport(body, rows, m.pageScroll)
-	}
-
-	footerRows := countLines(footer)
-	if footerRows >= rows {
-		return panels.Viewport(footer, rows, 0)
-	}
-
-	contentRows := rows - footerRows
-	separator := ""
-	if content != "" && contentRows > 0 {
-		contentRows--
-		separator = "\n\n"
-	}
-
-	contentView := ""
-	if contentRows > 0 && content != "" {
-		contentView = panels.Viewport(content, contentRows, m.pageScroll)
-		contentView = padLines(contentView, contentRows)
-	}
-
-	switch {
-	case contentView == "":
-		return padLines("", rows-footerRows) + footer
-	case separator == "":
-		return contentView + footer
-	default:
-		return contentView + separator + footer
-	}
+func (m Model) panelRows(r panels.TierRows) int {
+	return r.At(panels.TierForHeight(m.height))
 }
 
 func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
 	body := m.screen.view(m)
-	rows := m.scrollableRows(body)
+	rows := panels.ScrollableRows(body, panels.ContentRows(m.height))
 	if rows <= 0 || !panels.FitsScreenWidth(m.width) {
 		return false
 	}
 
-	total := countLines(m.scrollableBody(body))
+	total := panels.CountLines(panels.ScrollableBody(body, rows))
 	if total <= rows {
 		m.pageScroll = 0
 		return false
@@ -339,13 +233,13 @@ func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
 
 func (m *Model) clampPageScroll() {
 	body := m.screen.view(m)
-	rows := m.scrollableRows(body)
+	rows := panels.ScrollableRows(body, panels.ContentRows(m.height))
 	if rows <= 0 || !panels.FitsScreenWidth(m.width) {
 		m.pageScroll = 0
 		return
 	}
 
-	total := countLines(m.scrollableBody(body))
+	total := panels.CountLines(panels.ScrollableBody(body, rows))
 	if total <= rows {
 		m.pageScroll = 0
 		return
@@ -359,83 +253,4 @@ func (m *Model) clampPageScroll() {
 	s := panels.ScrollState{Offset: m.pageScroll}
 	s.Scroll(0, total, page)
 	m.pageScroll = s.Offset
-}
-
-func (m Model) scrollableBody(body string) string {
-	content, footer := splitStickyFooter(body)
-	if footer == "" {
-		return body
-	}
-
-	if m.scrollableRows(body) < 1 {
-		return ""
-	}
-	return content
-}
-
-func (m Model) scrollableRows(body string) int {
-	rows := m.viewportRows()
-	if rows <= 0 {
-		return 0
-	}
-
-	content, footer := splitStickyFooter(body)
-	if footer == "" {
-		return rows
-	}
-
-	footerRows := countLines(footer)
-	if footerRows >= rows {
-		return 0
-	}
-
-	contentRows := rows - footerRows
-	if content != "" && contentRows > 0 {
-		contentRows--
-	}
-	return max(contentRows, 0)
-}
-
-func countLines(s string) int {
-	lines := 0
-	for range strings.SplitSeq(s, "\n") {
-		lines++
-	}
-	if lines == 0 {
-		return 1
-	}
-	return lines
-}
-
-func splitStickyFooter(body string) (content, footer string) {
-	idx := strings.LastIndex(body, "\n\n")
-	if idx < 0 {
-		return body, ""
-	}
-	return body[:idx], body[idx+2:]
-}
-
-func padLines(body string, rows int) string {
-	if rows <= 0 {
-		return ""
-	}
-	if body == "" {
-		return strings.Repeat("\n", max(rows-1, 0))
-	}
-
-	lines := countLines(body)
-	if lines >= rows {
-		return body
-	}
-
-	var b strings.Builder
-	if body != "" {
-		b.WriteString(body)
-	}
-	for i := lines; i < rows; i++ {
-		if b.Len() > 0 {
-			b.WriteByte('\n')
-		}
-	}
-	return b.String()
 }

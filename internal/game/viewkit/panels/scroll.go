@@ -96,11 +96,18 @@ func Viewport(body string, rows, offset int) string {
 		return viewportHint(off, off+1, total)
 	}
 
-	windowRows := rows - 1
+	margin := 0
+	if rows >= 3 {
+		margin = 1
+	}
+	windowRows := rows - 1 - margin
 	off := clampOffset(offset, total, windowRows)
 	end := off + windowRows
-	out := make([]string, 0, windowRows+1)
+	out := make([]string, 0, windowRows+1+margin)
 	out = append(out, lines[off:end]...)
+	if margin == 1 {
+		out = append(out, "")
+	}
 	out = append(out, viewportHint(off, end, total))
 	return strings.Join(out, "\n")
 }
@@ -119,9 +126,6 @@ func clampOffset(offset, total, rows int) int {
 	return offset
 }
 
-// viewportHint renders the outer viewport's scroll indicator: directional
-// arrows show whether content is hidden above/below, alongside the paging key
-// and a position count.
 func viewportHint(offset, end, total int) string {
 	up, down := "  ", "  "
 	if offset > 0 {

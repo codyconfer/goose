@@ -3,6 +3,8 @@ package panels
 import (
 	"strings"
 	"testing"
+
+	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 )
 
 func TestStackFitTallShowsEverything(t *testing.T) {
@@ -57,5 +59,38 @@ func TestStackFitSkipsEmptySections(t *testing.T) {
 	want := Stack("alpha", "bravo")
 	if got != want {
 		t.Fatalf("StackFit with empty section = %q, want %q", got, want)
+	}
+}
+
+func TestTierForHeightBoundaries(t *testing.T) {
+	cases := []struct {
+		name   string
+		height int
+		want   Tier
+	}{
+		{"unknown height falls back to medium", 0, TierMedium},
+		{"below minimum is short", theme.MinBodyHeight - 1, TierShort},
+		{"exactly minimum is medium", theme.MinBodyHeight, TierMedium},
+		{"just below tall is medium", theme.TallBodyHeight - 1, TierMedium},
+		{"exactly tall is tall", theme.TallBodyHeight, TierTall},
+		{"above tall is tall", theme.TallBodyHeight + 20, TierTall},
+	}
+	for _, c := range cases {
+		if got := TierForHeight(c.height); got != c.want {
+			t.Errorf("%s: TierForHeight(%d) = %d, want %d", c.name, c.height, got, c.want)
+		}
+	}
+}
+
+func TestTierRowsAt(t *testing.T) {
+	r := TierRows{Short: 3, Medium: 8, Tall: 12}
+	if got := r.At(TierShort); got != 3 {
+		t.Errorf("At(TierShort) = %d, want 3", got)
+	}
+	if got := r.At(TierMedium); got != 8 {
+		t.Errorf("At(TierMedium) = %d, want 8", got)
+	}
+	if got := r.At(TierTall); got != 12 {
+		t.Errorf("At(TierTall) = %d, want 12", got)
 	}
 }

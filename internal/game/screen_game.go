@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
@@ -156,10 +157,12 @@ func (gs *gameScreen) view(m *Model) string {
 		sections = append(sections, panels.Section{Content: renderTransactions(m, panels.ScrollState{}, false), MinTier: panels.TierTall})
 	}
 	sections = append(sections,
-		panels.Section{Content: m.renderActivity(), MinTier: panels.TierMedium},
-		panels.Section{Content: m.renderTapper()},
 		panels.Section{Content: m.renderFeed(gs.feedScroll.Offset, focused == "feed")},
-		panels.Section{Content: m.renderFooter(gs.focusVerb(m), len(gs.focusables(m)))},
+		panels.Section{Content: m.renderActivity(), MinTier: panels.TierMedium},
+		panels.Section{Content: lipgloss.JoinVertical(lipgloss.Left,
+			m.renderTapper(),
+			m.renderFooter(gs.focusVerb(m), len(gs.focusables(m))),
+		)},
 	)
 	return panels.StackFit(m.heightTier(), sections...)
 }
