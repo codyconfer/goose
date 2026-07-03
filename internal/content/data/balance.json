@@ -40,6 +40,7 @@
 
   "decommission_refund": 0.5,
   "ledger_max": 20,
+  "agent_queue_max": 7,
 
   "max_offline_seconds": 600
 }

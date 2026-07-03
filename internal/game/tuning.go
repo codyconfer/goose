@@ -13,6 +13,7 @@ var (
 	notifBeats            = content.Tuning.NotifBeats
 	outcomeBeats          = content.Tuning.OutcomeBeats
 	characterTimeoutBeats = content.Tuning.CharacterTimeoutBeats
+	offlineBeats          = content.Tuning.OfflineBeats
 
 	notifQueueCap = content.Tuning.NotifQueueCap
 

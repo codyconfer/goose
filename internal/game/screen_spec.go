@@ -24,9 +24,46 @@ type specScreen struct {
 	leverageIdx int
 	positions   panels.ScrollState
 	ledger      panels.ScrollState
+	focus       int
 }
 
 func (ss *specScreen) simulates() bool { return true }
+
+func (ss *specScreen) focusables(m *Model) []string {
+	s := m.econ.Get()
+	return focusNames(
+		focusable{"builder", true},
+		focusable{"positions", len(s.Positions) > 0},
+		focusable{"ledger", len(s.Ledger) > m.panelRows(ledgerRows)},
+	)
+}
+
+func (ss *specScreen) focusedPanel(m *Model) string {
+	return focusResolve(ss.focusables(m), ss.focus)
+}
+
+func (ss *specScreen) focusMove(m *Model, delta int) {
+	s := m.econ.Get()
+	switch ss.focusedPanel(m) {
+	case "builder":
+		ss.premiumIdx = panels.StepIndex(ss.premiumIdx, -delta, len(specPremiums))
+	case "positions":
+		ss.positions.Scroll(delta, len(s.Positions), m.panelRows(positionRows))
+	case "ledger":
+		ss.ledger.Scroll(delta, len(s.Ledger), m.panelRows(ledgerRows))
+	}
+}
+
+func (ss *specScreen) focusVerb(m *Model) string {
+	switch ss.focusedPanel(m) {
+	case "positions":
+		return "positions"
+	case "ledger":
+		return "ledger"
+	default:
+		return "premium"
+	}
+}
 
 func (ss *specScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
@@ -36,12 +73,16 @@ func (ss *specScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		return tea.Quit
 	case "esc", "d", "q":
 		m.screen = ss.prev
-	case "left", "h", "right", "l", "tab":
+	case "left", "h", "right", "l":
 		ss.toggleKind()
 	case "up", "k":
-		ss.premiumIdx = panels.StepIndex(ss.premiumIdx, 1, len(specPremiums))
+		ss.focusMove(m, -1)
 	case "down", "j":
-		ss.premiumIdx = panels.StepIndex(ss.premiumIdx, -1, len(specPremiums))
+		ss.focusMove(m, 1)
+	case "tab":
+		ss.focus = focusStep(ss.focusables(m), ss.focus, 1)
+	case "shift+tab":
+		ss.focus = focusStep(ss.focusables(m), ss.focus, -1)
 	case "]", "+", "=":
 		ss.leverageIdx = panels.StepIndex(ss.leverageIdx, 1, len(specLeverages))
 	case "[", "-", "_":
@@ -56,14 +97,6 @@ func (ss *specScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		} else {
 			m.setFlash(content.Text.Spec.NothingToClose)
 		}
-	case "pgup":
-		ss.positions.Scroll(-positionRows, len(m.econ.Get().Positions), positionRows)
-	case "pgdown":
-		ss.positions.Scroll(positionRows, len(m.econ.Get().Positions), positionRows)
-	case ",":
-		ss.ledger.Scroll(-ledgerRows, len(m.econ.Get().Ledger), ledgerRows)
-	case ".":
-		ss.ledger.Scroll(ledgerRows, len(m.econ.Get().Ledger), ledgerRows)
 	}
 	return nil
 }
@@ -126,38 +159,39 @@ func (ss *specScreen) view(m *Model) string {
 		vk.Row(content.Text.Spec.TrendLabel, tradeTrendLabel(s)),
 	)
 
+	focused := ss.focusedPanel(m)
 	sections := []panels.Section{
-		{Content: vk.Header(content.Text.Spec.DeskTitle), Priority: panels.Essential},
-		{Content: purse, Priority: panels.Essential},
-		{Content: renderBook(m), Priority: 40},
-		{Content: ss.renderTicket(m), Priority: panels.Essential},
-		{Content: ss.renderPositions(m), Priority: panels.Essential},
+		{Content: vk.Header(content.Text.Spec.DeskTitle)},
+		{Content: purse},
+		{Content: renderBook(m), MinTier: panels.TierTall},
+		{Content: ss.renderTicket(m, focused == "builder")},
+		{Content: ss.renderPositions(m, focused == "positions")},
 	}
 	if len(s.Positions) > 0 {
-		sections = append(sections, panels.Section{Content: ss.renderPnL(m), Priority: 30})
+		sections = append(sections, panels.Section{Content: ss.renderPnL(m), MinTier: panels.TierTall})
 	}
-	hints := [][2]string{
-		toggleHint("call/put"),
-		verticalHint("premium"),
+	hints := [][2]string{toggleHint("call/put")}
+	hints = append(hints, focusHints(ss.focusVerb(m), len(ss.focusables(m)))...)
+	hints = append(hints,
 		hint("[ ]/-/+", "leverage"),
 		confirmHint("open"),
 		hint("x", "close"),
 		hint("c", "close all"),
-		hint("pgup/pgdn", "positions"),
-		hint(",/.", "ledger"),
-	}
-	hints = append(hints, m.pageHintPairs()...)
+	)
 	hints = append(hints, hint("esc/d/q", "back"))
 	sections = append(sections,
-		panels.Section{Content: renderLedger(m, ss.ledger), Priority: 20},
-		panels.Section{Content: panels.Flash(vk.Fit(m.flash)), Priority: 10},
-		panels.Section{Content: vk.HintLine(hints...), Priority: panels.Essential},
+		panels.Section{Content: renderLedger(m, ss.ledger, focused == "ledger"), MinTier: panels.TierMedium},
+		panels.Section{Content: panels.Flash(vk.Fit(m.flash))},
+		panels.Section{Content: vk.HintLine(hints...)},
 	)
-	return panels.StackFit(m.bodyBudget(), sections...)
+	return panels.StackFit(m.heightTier(), sections...)
 }
 
-func (ss *specScreen) renderTicket(m *Model) string {
+func (ss *specScreen) renderTicket(m *Model, focused bool) string {
 	vk := m.frame()
+	if focused {
+		vk = vk.Focus()
+	}
 	kind := ss.posKind()
 	thesis := content.Text.Spec.CallThesis
 	if kind == economy.PosPut {
@@ -201,8 +235,11 @@ func (ss *specScreen) renderTicket(m *Model) string {
 	)
 }
 
-func (ss *specScreen) renderPositions(m *Model) string {
+func (ss *specScreen) renderPositions(m *Model, focused bool) string {
 	vk := m.frame()
+	if focused {
+		vk = vk.Focus()
+	}
 	s := m.econ.Get()
 	if len(s.Positions) == 0 {
 		return vk.Panel(content.Text.Spec.PositionsPanel, theme.DimSty.Render(content.Text.Spec.PositionsEmpty))
@@ -237,7 +274,7 @@ func (ss *specScreen) renderPositions(m *Model) string {
 		left := marker + theme.ValSty.Render(desc) + "  " + mark
 		lines = append(lines, vk.Spread(left, bar+" "+clock))
 	}
-	return vk.ScrollPanel(content.Text.Spec.PositionsPanel, lines, positionRows, ss.positions.Offset)
+	return vk.ScrollPanel(content.Text.Spec.PositionsPanel, lines, m.panelRows(positionRows), ss.positions.Offset)
 }
 
 func renderBook(m *Model) string {
@@ -260,7 +297,7 @@ func (ss *specScreen) renderPnL(m *Model) string {
 		desc := fmt.Sprintf("%.0fx %s", p.Leverage, specWord(p.Kind))
 		data[i] = panels.Datum{Label: desc, Value: p.PnL(price)}
 	}
-	return vk.BarScroll(content.Text.Spec.PnlPanel, data, meterWidth(vk.Width, 40), economy.FormatNum, content.Text.Spec.PositionsEmpty, pnlRows, ss.positions.Offset)
+	return vk.BarScroll(content.Text.Spec.PnlPanel, data, panels.MeterWidth(vk.Width, 40), economy.FormatNum, content.Text.Spec.PositionsEmpty, m.panelRows(pnlRows), ss.positions.Offset)
 }
 
 func specWord(k economy.PosKind) string {

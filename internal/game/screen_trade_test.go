@@ -138,13 +138,16 @@ func TestTradeDeskQueueScrollsAndCancelsVisibleOrder(t *testing.T) {
 
 	m := New(econ, events.NewMachine(), 0)
 	m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
-	m = send(m, key("pgdown"))
+	m = send(m, key("tab"))
+	for i := 0; i < 12; i++ {
+		m = send(m, key("down"))
+	}
 
 	ts := m.screen.(*tradeScreen)
 	if ts.queue.Offset == 0 {
-		t.Fatal("queue page-down did not advance the scroll offset")
+		t.Fatal("focused queue scroll did not advance the offset")
 	}
-	if got := m.View(); !strings.Contains(got, "5–12 of 12") {
+	if got := m.View(); !strings.Contains(got, "7–12 of 12") {
 		t.Fatalf("queue footer missing scrolled range:\n%s", got)
 	}
 
@@ -152,8 +155,8 @@ func TestTradeDeskQueueScrollsAndCancelsVisibleOrder(t *testing.T) {
 	if len(m.econ.Get().Transactions) != 11 {
 		t.Fatalf("queue len=%d, want 11 after cancel", len(m.econ.Get().Transactions))
 	}
-	if got := m.econ.Get().Transactions[4].Amount; got != 60 {
-		t.Fatalf("visible cancel removed wrong order, amount at index 4=%v, want 60", got)
+	if got := m.econ.Get().Transactions[4].Amount; got != 50 {
+		t.Fatalf("visible cancel removed wrong order, amount at index 4=%v, want 50", got)
 	}
 }
 

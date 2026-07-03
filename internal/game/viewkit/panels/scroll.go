@@ -87,18 +87,52 @@ func Viewport(body string, rows, offset int) string {
 	if rows < 1 {
 		return ""
 	}
-	if len(lines) <= rows {
+	total := len(lines)
+	if total <= rows {
 		return body
 	}
 	if rows == 1 {
-		_, footer, _ := scrollWindow(lines, 1, offset)
-		return theme.DimSty.Render(footer)
+		off := clampOffset(offset, total, 1)
+		return viewportHint(off, off+1, total)
 	}
 
-	windowRows := rows - 1
-	window, footer, _ := scrollWindow(lines, windowRows, offset)
-	out := make([]string, 0, len(window)+1)
-	out = append(out, window...)
-	out = append(out, theme.DimSty.Render(footer))
+	margin := 0
+	if rows >= 3 {
+		margin = 1
+	}
+	windowRows := rows - 1 - margin
+	off := clampOffset(offset, total, windowRows)
+	end := off + windowRows
+	out := make([]string, 0, windowRows+1+margin)
+	out = append(out, lines[off:end]...)
+	if margin == 1 {
+		out = append(out, "")
+	}
+	out = append(out, viewportHint(off, end, total))
 	return strings.Join(out, "\n")
+}
+
+func clampOffset(offset, total, rows int) int {
+	max := total - rows
+	if max < 0 {
+		max = 0
+	}
+	if offset > max {
+		offset = max
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return offset
+}
+
+func viewportHint(offset, end, total int) string {
+	up, down := "  ", "  "
+	if offset > 0 {
+		up = "▲ "
+	}
+	if end < total {
+		down = "▼ "
+	}
+	return theme.DimSty.Render(fmt.Sprintf("%s%s pgup/pgdn  ·  %d–%d of %d", up, down, offset+1, end, total))
 }

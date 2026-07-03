@@ -177,7 +177,6 @@ func (ss *settingsScreen) view(m *Model) string {
 		hints = append(hints, horizontalHint("change"))
 	}
 	hints = append(hints, confirmHint("hatch flock"))
-	hints = append(hints, m.pageHintPairs()...)
 	hints = append(hints, hint("esc/q", "back"))
 	b.WriteString(vk.HintLine(hints...))
 	return b.String()

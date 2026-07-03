@@ -8,6 +8,7 @@ const (
 
 	MinScreenWidth     = 80
 	MinBodyHeight      = 35
+	TallBodyHeight     = 46
 	AppMarginY         = 1
 	AppMarginX         = 2
 	ScreenPaddingWidth = AppMarginX*2 + 4
@@ -36,6 +37,7 @@ var (
 	AppFrame = lipgloss.NewStyle().Margin(AppMarginY, AppMarginX)
 
 	PanelSty      = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(dim).Padding(0, 1).Width(BodyWidth + 2)
+	PanelFocusSty = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(gold).Padding(0, 1).Width(BodyWidth + 2)
 	PanelTitleSty = lipgloss.NewStyle().Bold(true).Foreground(gold)
 	TapCardSty    = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(gold).Padding(0, 1).Width(BodyWidth + 2).Align(lipgloss.Center)
 

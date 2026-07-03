@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 	"math"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -22,7 +21,7 @@ func (m Model) View() string {
 	if !panels.FitsScreenWidth(m.width) {
 		return theme.AppFrame.Render(panels.TooNarrow(m.width))
 	}
-	return theme.AppFrame.Render(m.layoutViewport(m.screen.view(&m)))
+	return theme.AppFrame.Render(panels.ViewportLayout(m.screen.view(&m), panels.ContentRows(m.height), m.pageScroll))
 }
 
 func (m Model) frame() panels.Frame {
@@ -52,7 +51,7 @@ func (m Model) renderStatus() string {
 		le := s.LevelEggs()
 		prev := s.LevelFloor()
 		frac := (le - prev) / (next - prev)
-		progress = panels.Meter(frac, meterWidth(vk.Width, 22)) +
+		progress = panels.Meter(frac, panels.MeterWidth(vk.Width, 22)) +
 			theme.DimSty.Render("  "+fmt.Sprintf(content.Text.Status.ProgressFmt, economy.FormatNum(le), economy.FormatNum(next), lvl+1))
 	} else {
 		progress = theme.EggSty.Render("★ ") + theme.DimSty.Render(content.Text.Status.MaxLevel)
@@ -105,6 +104,31 @@ func (m Model) renderActivity() string {
 	return theme.NotifIdleSty.Render(lipgloss.NewStyle().Width(m.frame().Width).Render(content.Text.Activity.Idle))
 }
 
+func (m Model) renderFeed(offset int, focused bool) string {
+	if !m.feed.active() {
+		return ""
+	}
+	vk := m.frame()
+	if focused {
+		vk = vk.Focus()
+	}
+	raw := m.feed.lines()
+	// Newest first, mirroring the ledgers, so offset 0 shows the latest activity
+	// and scrolling down walks back through history.
+	lines := make([]string, len(raw))
+	for i, ln := range raw {
+		lines[len(raw)-1-i] = theme.DimSty.Italic(true).Render(vk.Fit(ln))
+	}
+	return vk.ScrollPanel(content.Text.Feed.Panel, lines, m.panelRows(feedRows), offset)
+}
+
+// feedScrollable reports whether the feed holds more lines than its current
+// tier window can show, so the footer only advertises the scroll keys when they
+// would actually do something.
+func (m Model) feedScrollable() bool {
+	return m.feed.size() > m.panelRows(feedRows)
+}
+
 func (m Model) renderMarket() string {
 	vk := m.frame()
 	s := m.econ.Get()
@@ -125,35 +149,24 @@ func (m Model) renderMarket() string {
 	)
 }
 
-func (m Model) renderFooter() string {
-	hints := []([2]string){
-		confirmHint("generate"),
-		verticalHint("select"),
+func (m Model) renderFooter(focusVerb string, ringSize int) string {
+	hints := []([2]string){confirmHint("generate")}
+	hints = append(hints, focusHints(focusVerb, ringSize)...)
+	hints = append(hints,
 		hint("b/→/l", "buy"),
 		hint("s", "sell"),
 		hint("B/S", "max queue"),
 		hint("t", "trade"),
 		hint("a", "agents"),
-	}
+	)
 	if m.econ.Get().Level() >= economy.SpecUnlockLevel {
 		hints = append(hints,
 			hint("O/C", "max call"),
 			hint("P", "max put"),
 		)
 	}
-	hints = append(hints, m.pageHintPairs()...)
 	hints = append(hints, hint("esc/q", "quit"))
 	return m.frame().HintLine(hints...)
-}
-
-// pageHintPairs returns the ctrl+u/d page hint only when the current screen's
-// content actually overflows the viewport. The flag is measured in
-// clampPageScroll, so the legend never advertises paging that would be a no-op.
-func (m Model) pageHintPairs() [][2]string {
-	if m.scrollable {
-		return [][2]string{{"ctrl+u/d", "page"}}
-	}
-	return nil
 }
 
 func (m Model) renderNotification() string {
@@ -181,93 +194,20 @@ func notificationCard(title, message string, tone notify.Tone, width int) string
 	return sty.Render(body)
 }
 
-func meterWidth(frameWidth, desired int) int {
-	if desired < 1 {
-		return 1
-	}
-	max := frameWidth / 3
-	if max < 8 {
-		max = 8
-	}
-	if desired > max {
-		return max
-	}
-	return desired
-}
+func (m Model) heightTier() panels.Tier { return panels.TierForHeight(m.height) }
 
-func (m Model) viewportRows() int {
-	if m.height <= 0 {
-		return 0
-	}
-	rows := m.height - theme.AppMarginY*2
-	if rows < 1 {
-		return 1
-	}
-	return rows
-}
-
-// bodyBudget is the row budget a screen should fit its panels into. Unlike
-// viewportRows it falls back to the minimum supported height when the terminal
-// size is not yet known, so the first frame targets the design minimum rather
-// than dumping every panel.
-func (m Model) bodyBudget() int {
-	if m.height <= 0 {
-		return theme.MinBodyHeight - theme.AppMarginY*2
-	}
-	rows := m.height - theme.AppMarginY*2
-	if rows < 1 {
-		rows = 1
-	}
-	return rows
-}
-
-func (m Model) layoutViewport(body string) string {
-	rows := m.viewportRows()
-	if rows <= 0 {
-		return body
-	}
-
-	content, footer := splitStickyFooter(body)
-	if footer == "" {
-		return panels.Viewport(body, rows, m.pageScroll)
-	}
-
-	footerRows := countLines(footer)
-	if footerRows >= rows {
-		return panels.Viewport(footer, rows, 0)
-	}
-
-	contentRows := rows - footerRows
-	separator := ""
-	if content != "" && contentRows > 0 {
-		contentRows--
-		separator = "\n\n"
-	}
-
-	contentView := ""
-	if contentRows > 0 && content != "" {
-		contentView = panels.Viewport(content, contentRows, m.pageScroll)
-		contentView = padLines(contentView, contentRows)
-	}
-
-	switch {
-	case contentView == "":
-		return padLines("", rows-footerRows) + footer
-	case separator == "":
-		return contentView + footer
-	default:
-		return contentView + separator + footer
-	}
+func (m Model) panelRows(r panels.TierRows) int {
+	return r.At(panels.TierForHeight(m.height))
 }
 
 func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
 	body := m.screen.view(m)
-	rows := m.scrollableRows(body)
+	rows := panels.ScrollableRows(body, panels.ContentRows(m.height))
 	if rows <= 0 || !panels.FitsScreenWidth(m.width) {
 		return false
 	}
 
-	total := countLines(m.scrollableBody(body))
+	total := panels.CountLines(panels.ScrollableBody(body, rows))
 	if total <= rows {
 		m.pageScroll = 0
 		return false
@@ -280,9 +220,9 @@ func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
 
 	s := panels.ScrollState{Offset: m.pageScroll}
 	switch msg.String() {
-	case "ctrl+d":
+	case "pgdown":
 		s.Scroll(page, total, page)
-	case "ctrl+u":
+	case "pgup":
 		s.Scroll(-page, total, page)
 	default:
 		return false
@@ -293,20 +233,17 @@ func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
 
 func (m *Model) clampPageScroll() {
 	body := m.screen.view(m)
-	rows := m.scrollableRows(body)
+	rows := panels.ScrollableRows(body, panels.ContentRows(m.height))
 	if rows <= 0 || !panels.FitsScreenWidth(m.width) {
 		m.pageScroll = 0
-		m.scrollable = false
 		return
 	}
 
-	total := countLines(m.scrollableBody(body))
+	total := panels.CountLines(panels.ScrollableBody(body, rows))
 	if total <= rows {
 		m.pageScroll = 0
-		m.scrollable = false
 		return
 	}
-	m.scrollable = true
 
 	page := rows - 1
 	if page < 1 {
@@ -316,83 +253,4 @@ func (m *Model) clampPageScroll() {
 	s := panels.ScrollState{Offset: m.pageScroll}
 	s.Scroll(0, total, page)
 	m.pageScroll = s.Offset
-}
-
-func (m Model) scrollableBody(body string) string {
-	content, footer := splitStickyFooter(body)
-	if footer == "" {
-		return body
-	}
-
-	if m.scrollableRows(body) < 1 {
-		return ""
-	}
-	return content
-}
-
-func (m Model) scrollableRows(body string) int {
-	rows := m.viewportRows()
-	if rows <= 0 {
-		return 0
-	}
-
-	content, footer := splitStickyFooter(body)
-	if footer == "" {
-		return rows
-	}
-
-	footerRows := countLines(footer)
-	if footerRows >= rows {
-		return 0
-	}
-
-	contentRows := rows - footerRows
-	if content != "" && contentRows > 0 {
-		contentRows--
-	}
-	return max(contentRows, 0)
-}
-
-func countLines(s string) int {
-	lines := 0
-	for range strings.SplitSeq(s, "\n") {
-		lines++
-	}
-	if lines == 0 {
-		return 1
-	}
-	return lines
-}
-
-func splitStickyFooter(body string) (content, footer string) {
-	idx := strings.LastIndex(body, "\n\n")
-	if idx < 0 {
-		return body, ""
-	}
-	return body[:idx], body[idx+2:]
-}
-
-func padLines(body string, rows int) string {
-	if rows <= 0 {
-		return ""
-	}
-	if body == "" {
-		return strings.Repeat("\n", max(rows-1, 0))
-	}
-
-	lines := countLines(body)
-	if lines >= rows {
-		return body
-	}
-
-	var b strings.Builder
-	if body != "" {
-		b.WriteString(body)
-	}
-	for i := lines; i < rows; i++ {
-		if b.Len() > 0 {
-			b.WriteByte('\n')
-		}
-	}
-	return b.String()
 }

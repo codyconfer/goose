@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/codyconfer/goose/internal/characters"
+	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
 	"github.com/codyconfer/goose/internal/game/viewkit/theme"
@@ -32,10 +33,6 @@ func key(s string) tea.KeyMsg {
 		return tea.KeyMsg{Type: tea.KeyPgDown}
 	case "backspace":
 		return tea.KeyMsg{Type: tea.KeyBackspace}
-	case "ctrl+d":
-		return tea.KeyMsg{Type: tea.KeyCtrlD}
-	case "ctrl+u":
-		return tea.KeyMsg{Type: tea.KeyCtrlU}
 	default:
 		return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
 	}
@@ -107,8 +104,8 @@ func TestBuyFromCapex(t *testing.T) {
 	if m.econ.Get().PerClick != 2 {
 		t.Fatalf("per-click after buy=%v, want 2", m.econ.Get().PerClick)
 	}
-	if m.flash == "" {
-		t.Fatal("expected a purchase flash message")
+	if !m.feed.active() {
+		t.Fatal("expected a purchase message in the ticker feed")
 	}
 }
 
@@ -131,6 +128,33 @@ func TestHeartbeatSimulatesOnlyInGame(t *testing.T) {
 	mm = func() Model { n, _ := mm.Update(upBeatMsg(time.Now().Add(time.Second))); return n.(Model) }()
 	if mm.econ.Get().Tokens != before {
 		t.Fatalf("menu heartbeat changed tokens: %v -> %v", before, mm.econ.Get().Tokens)
+	}
+}
+
+func TestAgentFireLandsInFeedNotFlash(t *testing.T) {
+	s := economy.NewState()
+	s.Tokens = 1000
+	s.Agents = []economy.Agent{
+		{Key: "momentum", Enabled: true, Metric: economy.MetricTokens, Cmp: economy.CmpAbove, Threshold: 0, Action: economy.ActBuyEggs, Size: 10},
+	}
+	m := New(economy.FromState(s), events.NewMachine(), 0)
+	base := time.Unix(1_700_000_000, 0)
+	m.rng = rand.New(rand.NewSource(1))
+	m.clock = newClock(base)
+
+	for i := 1; i <= 10; i++ {
+		n, _ := m.Update(upBeatMsg(base.Add(time.Duration(i) * upBeatRate)))
+		m = n.(Model)
+	}
+
+	if !m.feed.active() {
+		t.Fatal("agent fire did not reach the feed")
+	}
+	if m.flash != "" {
+		t.Fatalf("agent fire leaked into flash: %q", m.flash)
+	}
+	if !strings.Contains(m.renderFeed(0, false), content.Text.Feed.Panel) {
+		t.Fatalf("feed panel not rendered: %q", m.renderFeed(0, false))
 	}
 }
 
@@ -179,6 +203,31 @@ func TestBaselineYieldAccruesOnlyOnSlowBeat(t *testing.T) {
 	m = n.(Model)
 	if s := m.econ.Get(); s.Eggs != 1 || s.Tokens != 1 {
 		t.Fatalf("baseline did not drip on slow beat: eggs=%v tokens=%v", s.Eggs, s.Tokens)
+	}
+}
+
+func TestOfflineNoteExpiresAfterTTL(t *testing.T) {
+	m := New(economy.NewMachine(), events.NewMachine(), 500)
+	if m.offline != 500 || m.offlineTTL != offlineBeats {
+		t.Fatalf("offline not armed on load: offline=%v ttl=%d", m.offline, m.offlineTTL)
+	}
+
+	base := time.Unix(1_700_000_000, 0)
+	m.rng = rand.New(rand.NewSource(1))
+	m.clock = newClock(base)
+
+	for i := 1; i < offlineBeats; i++ {
+		n, _ := m.Update(upBeatMsg(base.Add(time.Duration(i) * upBeatRate)))
+		m = n.(Model)
+	}
+	if m.offline == 0 {
+		t.Fatalf("offline note cleared before TTL elapsed (beat %d/%d)", offlineBeats-1, offlineBeats)
+	}
+
+	n, _ := m.Update(upBeatMsg(base.Add(time.Duration(offlineBeats) * upBeatRate)))
+	m = n.(Model)
+	if m.offline != 0 || m.offlineTTL != 0 {
+		t.Fatalf("offline note did not expire at TTL: offline=%v ttl=%d", m.offline, m.offlineTTL)
 	}
 }
 
@@ -518,7 +567,11 @@ func TestPageScrollRevealsOffscreenPanels(t *testing.T) {
 	if view := m.View(); strings.Contains(view, "TRADE QUEUE") {
 		t.Fatalf("queue should start below the viewport:\n%s", view)
 	}
-	if view := m.View(); !strings.Contains(view, "ctrl+u/d") {
+	// The overflow indicator lives in the viewport (not the footer legend).
+	if view := m.View(); !strings.Contains(view, "pgup/pgdn") {
+		t.Fatalf("viewport scroll hint missing before scroll:\n%s", view)
+	}
+	if view := m.View(); !strings.Contains(view, "esc/t/q") {
 		t.Fatalf("sticky footer legend missing before scroll:\n%s", view)
 	}
 
@@ -527,10 +580,10 @@ func TestPageScrollRevealsOffscreenPanels(t *testing.T) {
 		if strings.Contains(view, "TRADE QUEUE") {
 			break
 		}
-		m = send(m, key("ctrl+d"))
+		m = send(m, key("pgdown"))
 		view = m.View()
 	}
-	if !strings.Contains(view, "TRADE QUEUE") || !strings.Contains(view, "ctrl+u/d") {
+	if !strings.Contains(view, "TRADE QUEUE") || !strings.Contains(view, "esc/t/q") {
 		t.Fatalf("page scroll did not keep footer visible while revealing lower panels:\n%s", view)
 	}
 }
@@ -595,13 +648,13 @@ func TestActiveGameRenderAndProducerBuy(t *testing.T) {
 func TestBuyDeniedWhenBroke(t *testing.T) {
 	m := New(economy.NewMachine(), events.NewMachine(), 0)
 	m = send(m, key("b"))
-	if !strings.Contains(strings.ToLower(m.flash), "not enough") {
-		t.Fatalf("upgrade denial flash=%q", m.flash)
+	if feed := strings.ToLower(strings.Join(m.feed.lines(), "\n")); !strings.Contains(feed, "not enough") {
+		t.Fatalf("upgrade denial feed=%q", feed)
 	}
 	m = send(m, key("down"))
 	m = send(m, key("b"))
-	if !strings.Contains(strings.ToLower(m.flash), "not enough") {
-		t.Fatalf("producer denial flash=%q", m.flash)
+	if feed := strings.ToLower(strings.Join(m.feed.lines(), "\n")); !strings.Contains(feed, "not enough") {
+		t.Fatalf("producer denial feed=%q", feed)
 	}
 }
 

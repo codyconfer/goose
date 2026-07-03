@@ -49,7 +49,7 @@ func TestTradeDeskLegendShowsAliases(t *testing.T) {
 	m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
 
 	assertHintText(t, renderForHints(m),
-		"tab/←/→/h/l",
+		"←/→/h/l",
 		"↑/↓/j/k",
 		"enter/space",
 		"esc/t/q",
@@ -61,7 +61,7 @@ func TestSpecDeskLegendShowsAliases(t *testing.T) {
 	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
 
 	assertHintText(t, renderForHints(m),
-		"tab/←/→/h/l",
+		"←/→/h/l",
 		"↑/↓/j/k",
 		"[ ]/-/+",
 		"enter/space",

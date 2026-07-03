@@ -9,7 +9,8 @@ import (
 )
 
 type Frame struct {
-	Width int
+	Width   int
+	Focused bool
 }
 
 func NewFrame(width int) Frame {
@@ -20,6 +21,11 @@ func NewFrame(width int) Frame {
 		width = theme.MinBodyWidth
 	}
 	return Frame{Width: width}
+}
+
+func (f Frame) Focus() Frame {
+	f.Focused = true
+	return f
 }
 
 func DefaultFrame() Frame { return NewFrame(theme.BodyWidth) }
@@ -102,7 +108,11 @@ func Box(lines ...string) string {
 }
 
 func (f Frame) Box(lines ...string) string {
-	return theme.PanelSty.Width(f.bodyWidth() + 2).Render(strings.Join(lines, "\n"))
+	sty := theme.PanelSty
+	if f.Focused {
+		sty = theme.PanelFocusSty
+	}
+	return sty.Width(f.bodyWidth() + 2).Render(strings.Join(lines, "\n"))
 }
 
 func Panel(title string, lines ...string) string {
@@ -134,6 +144,20 @@ func ProgressBar(frac float64, width int) string {
 
 func Meter(frac float64, width int) string {
 	return "[" + ProgressBar(frac, width) + "]"
+}
+
+func MeterWidth(frameWidth, desired int) int {
+	if desired < 1 {
+		return 1
+	}
+	max := frameWidth / 3
+	if max < 8 {
+		max = 8
+	}
+	if desired > max {
+		return max
+	}
+	return desired
 }
 
 func HintLine(pairs ...[2]string) string {

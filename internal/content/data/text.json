@@ -24,6 +24,9 @@
   "activity": {
     "idle": "… the flock waddles about, disrupting nothing in particular. Anything could happen."
   },
+  "feed": {
+    "panel": "📟 TICKER"
+  },
   "market": {
     "panel": "EGG MARKET",
     "price_steady": "→ steady (boring, sustainable)",

@@ -41,7 +41,7 @@
         {
           "weight": { "value": 1 },
           "tone": "positive",
-          "titles": ["🌟 Golden Hour"],
+          "titles": ["📊 10x Dev Sprint Velocity"],
           "messages": ["The whole flock catches the same standup energy at once and throws off {{num .gain}} tokens before the vibe wears off."],
           "values": [
             {
