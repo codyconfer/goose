@@ -6,10 +6,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/codyconfer/viewkit/keys"
+	"github.com/codyconfer/viewkit/layout"
+	"github.com/codyconfer/viewkit/panels"
+	"github.com/codyconfer/viewkit/theme"
+
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/game/viewkit/panels"
-	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 )
 
 var tradeSizes = content.TradeSizes
@@ -26,31 +29,55 @@ type tradeScreen struct {
 	prev    *gameScreen
 	kind    economy.TxKind
 	sizeIdx int
-	queue   panels.ScrollState
-	ledger  panels.ScrollState
+	queue   layout.ScrollState
+	ledger  layout.ScrollState
 	focus   int
 }
 
 func (ts *tradeScreen) simulates() bool { return true }
 
-func (ts *tradeScreen) focusables(m *Model) []string {
+func (ts *tradeScreen) focusables(m *Model) layout.Ring {
+	return layout.PaneRing(ts.panes(m))
+}
+
+func (ts *tradeScreen) renderPurse(m *Model, vk layout.Frame) string {
 	s := m.econ.Get()
-	return focusNames(
-		focusable{"builder", true},
-		focusable{"queue", len(s.Transactions) > 0},
-		focusable{"ledger", len(s.Ledger) > m.panelRows(ledgerRows)},
+	return vk.Panel(content.Text.Trade.PursePanel,
+		vk.Spread(theme.AccentSty.Render("🪙 "+economy.FormatNum(s.Tokens))+theme.DimSty.Render(" tokens"),
+			theme.AccentSty.Render("🥚 "+economy.FormatNum(s.Eggs))+theme.DimSty.Render(" eggs")),
+		vk.Row(content.Text.Trade.MarketPriceLabel, theme.ValSty.Render(economy.FormatNum(s.EggPrice())+" tokens/egg")),
+		vk.Row(content.Text.Trade.ConsumersPayLabel, theme.CanSty.Render(economy.FormatNum(s.SellPrice())+" tokens/egg")),
+		vk.Row(content.Text.Trade.TrendLabel, tradeTrendLabel(s)),
+		vk.Row(content.Text.Trade.TrendStrengthLabel, tradeTrendStrength(s)),
 	)
 }
 
+func (ts *tradeScreen) panes(m *Model) []layout.Pane {
+	s := m.econ.Get()
+	return []layout.Pane{
+		{Name: "purse", Render: func(f layout.Frame) string { return ts.renderPurse(m, cellFrame(f)) }},
+		{Name: "chart", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderPriceChart(m, cellFrame(f)) }},
+		{Name: "flow", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderFlow(m, cellFrame(f)) }},
+		{Name: "builder", Interactive: true, Render: func(f layout.Frame) string { return ts.renderBuilder(m, cellFrame(f)) }},
+		{Name: "queue", Interactive: len(s.Transactions) > 0, Render: func(f layout.Frame) string { return renderTransactions(m, cellFrame(f), ts.queue) }},
+		{
+			Name:        "ledger",
+			MinTier:     layout.TierMedium,
+			Interactive: len(s.Ledger) > m.panelRows(ledgerRows),
+			Render:      func(f layout.Frame) string { return renderLedger(m, cellFrame(f), ts.ledger) },
+		},
+	}
+}
+
 func (ts *tradeScreen) focusedPanel(m *Model) string {
-	return focusResolve(ts.focusables(m), ts.focus)
+	return ts.focusables(m).At(ts.focus)
 }
 
 func (ts *tradeScreen) focusMove(m *Model, delta int) {
 	s := m.econ.Get()
 	switch ts.focusedPanel(m) {
 	case "builder":
-		// Preserve the historic mapping where up grows the order size.
+
 		ts.sizeIdx = panels.StepIndex(ts.sizeIdx, -delta, len(tradeSizes)+1)
 	case "queue":
 		ts.queue.Scroll(delta, len(s.Transactions), m.panelRows(queueRows))
@@ -71,33 +98,37 @@ func (ts *tradeScreen) focusVerb(m *Model) string {
 }
 
 func (ts *tradeScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
-	switch msg.String() {
-	case "ctrl+c":
+	action, ok := tradeKeymap().Action(msg.String())
+	if !ok {
+		return nil
+	}
+	switch action {
+	case keys.Quit:
 		m.quitting = true
 		_ = m.save()
 		return tea.Quit
-	case "esc", "t", "q":
+	case keys.Cancel:
 		m.screen = ts.prev
-	case "d":
+	case actOpenSpec:
 		ts.openSpec(m)
-	case "left", "h", "right", "l":
+	case actToggleKind:
 		ts.toggleKind()
-	case "up", "k":
+	case keys.Up:
 		ts.focusMove(m, -1)
-	case "down", "j":
+	case keys.Down:
 		ts.focusMove(m, 1)
-	case "tab":
-		ts.focus = focusStep(ts.focusables(m), ts.focus, 1)
-	case "shift+tab":
-		ts.focus = focusStep(ts.focusables(m), ts.focus, -1)
-	case "enter", " ", "spacebar":
+	case keys.FocusNext:
+		ts.focus = ts.focusables(m).Step(ts.focus, 1)
+	case keys.FocusPrev:
+		ts.focus = ts.focusables(m).Step(ts.focus, -1)
+	case keys.Confirm:
 		ts.schedule(m)
-	case "c":
+	case actClearQueue:
 		if len(m.econ.Get().Transactions) > 0 {
 			m.econ.ClearTransactions()
 			m.setFlash(content.Text.Trade.ClearedFlash)
 		}
-	case "x":
+	case actCancelOrder:
 		if m.econ.CancelTransaction(ts.queue.Offset) {
 			m.setFlash(content.Text.Trade.CancelledFlash)
 		}
@@ -147,45 +178,34 @@ func (ts *tradeScreen) schedule(m *Model) {
 func (ts *tradeScreen) view(m *Model) string {
 	vk := m.frame()
 	s := m.econ.Get()
-	purse := vk.Panel(content.Text.Trade.PursePanel,
-		vk.Spread(theme.EggSty.Render("🪙 "+economy.FormatNum(s.Tokens))+theme.DimSty.Render(" tokens"),
-			theme.EggSty.Render("🥚 "+economy.FormatNum(s.Eggs))+theme.DimSty.Render(" eggs")),
-		vk.Row(content.Text.Trade.MarketPriceLabel, theme.ValSty.Render(economy.FormatNum(s.EggPrice())+" tokens/egg")),
-		vk.Row(content.Text.Trade.ConsumersPayLabel, theme.CanSty.Render(economy.FormatNum(s.SellPrice())+" tokens/egg")),
-		vk.Row(content.Text.Trade.TrendLabel, tradeTrendLabel(s)),
-		vk.Row(content.Text.Trade.TrendStrengthLabel, tradeTrendStrength(s)),
-	)
-
-	focused := ts.focusedPanel(m)
-	hints := []([2]string){toggleHint("buy/sell")}
-	hints = append(hints, focusHints(ts.focusVerb(m), len(ts.focusables(m)))...)
+	km := tradeKeymap()
+	hints := [][2]string{
+		km.Hint(actToggleKind),
+		km.HintLabeled(keys.Up, ts.focusVerb(m)),
+	}
+	if len(ts.focusables(m)) > 1 {
+		hints = append(hints, km.Hint(keys.FocusNext))
+	}
 	hints = append(hints,
-		confirmHint("queue"),
-		hint("x", "cancel"),
-		hint("c", "clear"),
+		km.Hint(keys.Confirm),
+		km.Hint(actCancelOrder),
+		km.Hint(actClearQueue),
 	)
 	if s.Level() >= economy.SpecUnlockLevel {
-		hints = append(hints, hint("d", "derivatives"))
+		hints = append(hints, km.Hint(actOpenSpec))
 	}
-	hints = append(hints, hint("esc/t/q", "back"))
-	return panels.StackFit(m.heightTier(),
-		panels.Section{Content: vk.Header(content.Text.Trade.DeskTitle)},
-		panels.Section{Content: purse},
-		panels.Section{Content: renderPriceChart(m), MinTier: panels.TierTall},
-		panels.Section{Content: renderFlow(m), MinTier: panels.TierTall},
-		panels.Section{Content: ts.renderBuilder(m, focused == "builder")},
-		panels.Section{Content: renderTransactions(m, ts.queue, focused == "queue")},
-		panels.Section{Content: renderLedger(m, ts.ledger, focused == "ledger"), MinTier: panels.TierMedium},
-		panels.Section{Content: panels.Flash(vk.Fit(m.flash))},
-		panels.Section{Content: vk.HintLine(hints...)},
+	hints = append(hints, km.Hint(keys.Cancel))
+
+	body := layout.Screen{Layout: layout.FlexGrid{}, Panes: ts.panes(m)}.Render(m.bodyFrame(), m.heightTier(), ts.focus)
+	return layout.Stack(
+		vk.Header(content.Text.Trade.DeskTitle),
+		body,
+		panels.Flash(vk.Fit(m.flash)),
+		vk.HintLine(hints...),
 	)
 }
 
-func (ts *tradeScreen) renderBuilder(m *Model, focused bool) string {
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
-	}
+func (ts *tradeScreen) renderBuilder(m *Model, vk layout.Frame) string {
 	dir := panels.Toggle(content.Text.Trade.BuyToggle, content.Text.Trade.SellToggle, ts.kind == economy.TxBuyEggs)
 
 	amt := ts.amount(m)
@@ -209,7 +229,7 @@ func (ts *tradeScreen) renderBuilder(m *Model, focused bool) string {
 
 	return vk.Panel(content.Text.Trade.NewOrderPanel,
 		vk.Row(content.Text.Trade.DirectionLabel, dir),
-		vk.Row(content.Text.Trade.AmountLabel, theme.EggSty.Render(ts.sizeLabel(m)+" 🥚")),
+		vk.Row(content.Text.Trade.AmountLabel, theme.AccentSty.Render(ts.sizeLabel(m)+" 🥚")),
 		vk.Row(content.Text.Trade.EstimateLabel, note),
 	)
 }
@@ -221,8 +241,7 @@ func (ts *tradeScreen) sizeLabel(m *Model) string {
 	return fmt.Sprintf(content.Text.Trade.MaxFmt, economy.FormatNum(ts.amount(m)))
 }
 
-func renderPriceChart(m *Model) string {
-	vk := m.frame()
+func renderPriceChart(m *Model, vk layout.Frame) string {
 	cs := m.candles
 	if len(cs) == 0 {
 		return vk.Panel(content.Text.Trade.PriceChartPanel, theme.DimSty.Render(content.Text.Trade.PriceChartGathering))
@@ -242,22 +261,21 @@ func renderPriceChart(m *Model) string {
 		trend = theme.CantSty.Render(fmt.Sprintf(content.Text.Trade.TrendDownFmt, (1-cur/first)*100))
 	}
 	footer := vk.Spread(
-		theme.EggSty.Render(content.Text.Trade.NowPrefix+economy.FormatNum(cur))+theme.DimSty.Render(" tokens/egg"),
+		theme.AccentSty.Render(content.Text.Trade.NowPrefix+economy.FormatNum(cur))+theme.DimSty.Render(" tokens/egg"),
 		trend)
 
 	beats := (len(cs)-1)*candleSamples + m.candleBeats
-	return vk.Candle(fmt.Sprintf(content.Text.Trade.PriceChartTitleFmt, beats), toOHLC(cs), width, priceChartHeight, economy.FormatNum, footer)
+	return panels.Candle(vk, fmt.Sprintf(content.Text.Trade.PriceChartTitleFmt, beats), toOHLC(cs), width, priceChartHeight, economy.FormatNum, footer)
 }
 
-func renderFlow(m *Model) string {
-	vk := m.frame()
+func renderFlow(m *Model, vk layout.Frame) string {
 	s := m.econ.Get()
 	data := []panels.Datum{
 		{Label: content.Text.Trade.FlowLaying, Value: s.EggsPerSecond()},
 		{Label: content.Text.Trade.FlowSelling, Value: m.sellRate},
 		{Label: content.Text.Trade.FlowDemand, Value: s.Demand()},
 	}
-	return vk.Bar(content.Text.Trade.FlowPanel, data, panels.MeterWidth(vk.Width, 40), economy.FormatNum, "")
+	return panels.Bar(vk, content.Text.Trade.FlowPanel, data, panels.MeterWidth(vk.Width, 40), economy.FormatNum, "")
 }
 
 func toOHLC(cs []candle) []panels.OHLC {
@@ -268,23 +286,19 @@ func toOHLC(cs []candle) []panels.OHLC {
 	return out
 }
 
-func renderTransactions(m *Model, sv panels.ScrollState, focused bool) string {
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
-	}
+func renderTransactions(m *Model, vk layout.Frame, sv layout.ScrollState) string {
 	s := m.econ.Get()
 	var prefix []string
 
 	if s.Demand() > 0 {
-		left := theme.EggSty.Render(content.Text.Trade.QueueConsumersLabel) + theme.DimSty.Render(content.Text.Trade.QueueConsumersSuffix)
+		left := theme.AccentSty.Render(content.Text.Trade.QueueConsumersLabel) + theme.DimSty.Render(content.Text.Trade.QueueConsumersSuffix)
 		right := theme.CanSty.Render("+" + economy.FormatNum(m.sellRate) + " /sec")
 		prefix = append(prefix, vk.Spread(left, right))
 	}
 
 	lines := make([]string, 0, len(s.Transactions))
 	for i, o := range s.Transactions {
-		marker := panels.Cursor(i == sv.Offset)
+		marker := layout.Cursor(i == sv.Offset)
 		label := fmt.Sprintf("%s %s 🥚", tradeVerb(o.Kind), economy.FormatNum(o.Amount))
 		frac := 0.0
 		if o.Amount > 0 {
@@ -334,26 +348,22 @@ func tradeCompletedMsg(o economy.Transaction) string {
 const feedHistory = 50
 
 var (
-	capexRows    = panels.TierRows{Short: 4, Medium: 6, Tall: 14}
-	ledgerRows   = panels.TierRows{Short: 3, Medium: 6, Tall: 12}
-	pnlRows      = panels.TierRows{Short: 3, Medium: 6, Tall: 12}
-	positionRows = panels.TierRows{Short: 3, Medium: 6, Tall: 12}
-	queueRows    = panels.TierRows{Short: 3, Medium: 6, Tall: 12}
-	agentRows    = panels.TierRows{Short: 4, Medium: 6, Tall: 14}
-	feedRows     = panels.TierRows{Short: 3, Medium: 5, Tall: 8}
+	capexRows    = layout.TierRows{Short: 4, Medium: 6, Tall: 14}
+	ledgerRows   = layout.TierRows{Short: 3, Medium: 6, Tall: 12}
+	pnlRows      = layout.TierRows{Short: 3, Medium: 6, Tall: 12}
+	positionRows = layout.TierRows{Short: 3, Medium: 6, Tall: 12}
+	queueRows    = layout.TierRows{Short: 3, Medium: 6, Tall: 12}
+	agentRows    = layout.TierRows{Short: 4, Medium: 6, Tall: 14}
+	feedRows     = layout.TierRows{Short: 3, Medium: 5, Tall: 8}
 )
 
-func renderLedger(m *Model, sv panels.ScrollState, focused bool) string {
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
-	}
+func renderLedger(m *Model, vk layout.Frame, sv layout.ScrollState) string {
 	led := m.econ.Get().Ledger
 	rows := make([]panels.LedgerRow, 0, len(led))
 	for _, tx := range slices.Backward(led) {
 		rows = append(rows, panels.LedgerRow{Label: ledgerDesc(tx), Delta: tx.Tokens})
 	}
-	return vk.Ledger(content.Text.Trade.LedgerPanel, rows, "🪙", economy.FormatNum, m.panelRows(ledgerRows), sv.Offset, content.Text.Trade.LedgerEmpty)
+	return panels.Ledger(vk, content.Text.Trade.LedgerPanel, rows, "🪙", economy.FormatNum, m.panelRows(ledgerRows), sv.Offset, content.Text.Trade.LedgerEmpty)
 }
 
 func ledgerDesc(tx economy.Transaction) string {

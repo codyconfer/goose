@@ -9,11 +9,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/codyconfer/viewkit/theme"
+
 	"github.com/codyconfer/goose/internal/characters"
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
-	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 	"github.com/codyconfer/goose/internal/notify"
 	"github.com/codyconfer/goose/internal/store"
 	"github.com/codyconfer/goose/internal/world"
@@ -567,7 +568,7 @@ func TestPageScrollRevealsOffscreenPanels(t *testing.T) {
 	if view := m.View(); strings.Contains(view, "TRADE QUEUE") {
 		t.Fatalf("queue should start below the viewport:\n%s", view)
 	}
-	// The overflow indicator lives in the viewport (not the footer legend).
+
 	if view := m.View(); !strings.Contains(view, "pgup/pgdn") {
 		t.Fatalf("viewport scroll hint missing before scroll:\n%s", view)
 	}

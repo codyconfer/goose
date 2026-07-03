@@ -1,5 +1,6 @@
 APP := goose
-MODULE := $(shell go list -m)
+# GOWORK=off so the workspace (go.work) doesn't list the viewkit module too.
+MODULE := $(shell GOWORK=off go list -m)
 BASE_VERSION ?= 0.1.0
 VERSION ?= $(shell BASE_VERSION=$(BASE_VERSION) ./scripts/semver.sh)
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
@@ -11,6 +12,7 @@ APPIMAGE_TEMPLATE_DIR := packaging/linux/appimage
 APPIMAGETOOL ?= appimagetool
 GOLANGCI := go tool golangci-lint
 GOVULNCHECK := go tool govulncheck
+GO_MODULES ?= . viewkit
 LDFLAGS := -s -w -X '$(MODULE)/internal/buildinfo.Version=$(VERSION)' -X '$(MODULE)/internal/buildinfo.Commit=$(COMMIT)' -X '$(MODULE)/internal/buildinfo.Date=$(BUILD_DATE)' -X '$(MODULE)/internal/buildinfo.Dirty=$(DIRTY)'
 
 BUMP ?= patch
@@ -26,14 +28,13 @@ fmt:
 	@$(GOLANGCI) fmt || true
 
 lint:
-	go vet ./...
-	$(GOLANGCI) run
+	@set -e; for m in $(GO_MODULES); do echo "== lint $$m =="; (cd "$$m" && go vet ./... && $(GOLANGCI) run); done
 
 vuln:
-	$(GOVULNCHECK) ./...
+	@set -e; for m in $(GO_MODULES); do echo "== vuln $$m =="; (cd "$$m" && $(GOVULNCHECK) ./...); done
 
 test:
-	go test ./...
+	@set -e; for m in $(GO_MODULES); do echo "== test $$m =="; (cd "$$m" && go test ./...); done
 
 check: fmt lint test
 

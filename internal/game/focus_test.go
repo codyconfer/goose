@@ -1,42 +1,11 @@
 package game
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
 )
-
-func TestFocusNamesFiltersInteractive(t *testing.T) {
-	got := focusNames(
-		focusable{"a", true},
-		focusable{"b", false},
-		focusable{"c", true},
-	)
-	if !slices.Equal(got, []string{"a", "c"}) {
-		t.Fatalf("focusNames = %v, want [a c]", got)
-	}
-}
-
-func TestFocusStepWrapsAndResolveClamps(t *testing.T) {
-	names := []string{"a", "c"}
-	if got := focusStep(names, 0, 1); got != 1 {
-		t.Errorf("step forward = %d, want 1", got)
-	}
-	if got := focusStep(names, 1, 1); got != 0 {
-		t.Errorf("step past the end should wrap to 0, got %d", got)
-	}
-	if got := focusStep(names, 0, -1); got != 1 {
-		t.Errorf("step before the start should wrap to last, got %d", got)
-	}
-	if got := focusResolve(names, 99); got != "c" {
-		t.Errorf("resolve clamps out-of-range idx, got %q", got)
-	}
-	if got := focusResolve(nil, 0); got != "" {
-		t.Errorf("resolve of an empty ring should be empty, got %q", got)
-	}
-}
 
 func TestTradeFocusRingScrollsFocusedPanel(t *testing.T) {
 	s := economy.NewState()

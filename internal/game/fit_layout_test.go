@@ -6,10 +6,11 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/codyconfer/viewkit/theme"
+
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
-	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 )
 
 func atMinHeight(m Model) string {
