@@ -31,6 +31,10 @@ func (m Model) frame() layout.Frame {
 	return layout.ScreenFrame(m.width)
 }
 
+func (m Model) bodyFrame() layout.Frame {
+	return layout.NewFrame(m.frame().Width + 4)
+}
+
 func (m Model) renderTitleBar() string {
 	return m.frame().Header(content.Text.App.Title, content.Text.App.Subtitle)
 }

@@ -10,6 +10,7 @@ import (
 
 type Frame struct {
 	Width   int
+	Height  int
 	Focused bool
 }
 
@@ -25,6 +26,11 @@ func NewFrame(width int) Frame {
 
 func (f Frame) Focus() Frame {
 	f.Focused = true
+	return f
+}
+
+func (f Frame) WithHeight(h int) Frame {
+	f.Height = h
 	return f
 }
 

@@ -131,10 +131,19 @@ func nearestIndex(opts []float64, v float64) int {
 	return best
 }
 
+func (as *agentsScreen) panes(m *Model) []layout.Pane {
+	agents := m.econ.Get().Agents
+	return []layout.Pane{
+		{
+			Name:        "roster",
+			Interactive: len(agents) > 0,
+			Render:      func(f layout.Frame) string { return as.renderRoster(m, cellFrame(f), agents) },
+		},
+	}
+}
+
 func (as *agentsScreen) view(m *Model) string {
 	vk := m.frame()
-	agents := m.econ.Get().Agents
-
 	km := agentsKeymap()
 	hints := [][2]string{
 		km.Hint(keys.Up),
@@ -143,20 +152,16 @@ func (as *agentsScreen) view(m *Model) string {
 		km.Hint(keys.Inc),
 		km.Hint(keys.Cancel),
 	}
-	sections := []string{
+	body := layout.Screen{Layout: layout.FlexGrid{}, Panes: as.panes(m)}.Render(m.bodyFrame(), m.heightTier(), 0)
+	return layout.Stack(
 		vk.Header(content.Text.Agents.DeskTitle, content.Text.Agents.Subtitle),
-		as.renderRoster(m, agents, len(agents) > 0),
+		body,
 		panels.Flash(vk.Fit(m.flash)),
 		vk.HintLine(hints...),
-	}
-	return layout.Stack(sections...)
+	)
 }
 
-func (as *agentsScreen) renderRoster(m *Model, agents []economy.Agent, focused bool) string {
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
-	}
+func (as *agentsScreen) renderRoster(m *Model, vk layout.Frame, agents []economy.Agent) string {
 	if len(agents) == 0 {
 		return vk.Panel(content.Text.Agents.Panel, theme.DimSty.Render(content.Text.Agents.Empty))
 	}

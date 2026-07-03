@@ -33,12 +33,39 @@ type specScreen struct {
 func (ss *specScreen) simulates() bool { return true }
 
 func (ss *specScreen) focusables(m *Model) layout.Ring {
+	return layout.PaneRing(ss.panes(m))
+}
+
+func cellFrame(f layout.Frame) layout.Frame {
+	inner := layout.NewFrame(f.Width - 4)
+	if f.Focused {
+		inner = inner.Focus()
+	}
+	return inner
+}
+
+func (ss *specScreen) panes(m *Model) []layout.Pane {
 	s := m.econ.Get()
-	return layout.NewRing(
-		layout.Focusable{Name: "builder", Interactive: true},
-		layout.Focusable{Name: "positions", Interactive: len(s.Positions) > 0},
-		layout.Focusable{Name: "ledger", Interactive: len(s.Ledger) > m.panelRows(ledgerRows)},
-	)
+	panes := []layout.Pane{
+		{Name: "purse", Render: func(f layout.Frame) string { return ss.renderPurse(m, cellFrame(f)) }},
+		{Name: "book", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderBook(m, cellFrame(f)) }},
+		{Name: "builder", Interactive: true, Render: func(f layout.Frame) string { return ss.renderTicket(m, cellFrame(f)) }},
+		{Name: "positions", Interactive: len(s.Positions) > 0, Render: func(f layout.Frame) string { return ss.renderPositions(m, cellFrame(f)) }},
+	}
+	if len(s.Positions) > 0 {
+		panes = append(panes, layout.Pane{
+			Name:    "pnl",
+			MinTier: layout.TierTall,
+			Render:  func(f layout.Frame) string { return ss.renderPnL(m, cellFrame(f)) },
+		})
+	}
+	panes = append(panes, layout.Pane{
+		Name:        "ledger",
+		MinTier:     layout.TierMedium,
+		Interactive: len(s.Ledger) > m.panelRows(ledgerRows),
+		Render:      func(f layout.Frame) string { return renderLedger(m, cellFrame(f), ss.ledger) },
+	})
+	return panes
 }
 
 func (ss *specScreen) focusedPanel(m *Model) string {
@@ -156,27 +183,18 @@ func (ss *specScreen) close(m *Model) {
 	}
 }
 
-func (ss *specScreen) view(m *Model) string {
-	vk := m.frame()
+func (ss *specScreen) renderPurse(m *Model, vk layout.Frame) string {
 	s := m.econ.Get()
-	purse := vk.Panel(content.Text.Spec.PursePanel,
+	return vk.Panel(content.Text.Spec.PursePanel,
 		vk.Spread(theme.AccentSty.Render("🪙 "+economy.FormatNum(s.Tokens))+theme.DimSty.Render(" tokens"),
 			theme.ValSty.Render(economy.FormatNum(s.EggPrice())+" tokens/egg")+theme.DimSty.Render("  "+content.Text.Spec.PriceLabel)),
 		vk.Row(content.Text.Spec.ExposureLabel, theme.ValSty.Render(economy.FormatNum(s.LeveragedExposure())+" 🪙")),
 		vk.Row(content.Text.Spec.TrendLabel, tradeTrendLabel(s)),
 	)
+}
 
-	focused := ss.focusedPanel(m)
-	sections := []layout.Section{
-		{Content: vk.Header(content.Text.Spec.DeskTitle)},
-		{Content: purse},
-		{Content: renderBook(m), MinTier: layout.TierTall},
-		{Content: ss.renderTicket(m, focused == "builder")},
-		{Content: ss.renderPositions(m, focused == "positions")},
-	}
-	if len(s.Positions) > 0 {
-		sections = append(sections, layout.Section{Content: ss.renderPnL(m), MinTier: layout.TierTall})
-	}
+func (ss *specScreen) view(m *Model) string {
+	vk := m.frame()
 	km := specKeymap()
 	hints := [][2]string{
 		km.Hint(actToggleKind),
@@ -192,19 +210,17 @@ func (ss *specScreen) view(m *Model) string {
 		km.Hint(actCloseAll),
 	)
 	hints = append(hints, km.Hint(keys.Cancel))
-	sections = append(sections,
-		layout.Section{Content: renderLedger(m, ss.ledger, focused == "ledger"), MinTier: layout.TierMedium},
-		layout.Section{Content: panels.Flash(vk.Fit(m.flash))},
-		layout.Section{Content: vk.HintLine(hints...)},
+
+	body := layout.Screen{Layout: layout.FlexGrid{}, Panes: ss.panes(m)}.Render(m.bodyFrame(), m.heightTier(), ss.focus)
+	return layout.Stack(
+		vk.Header(content.Text.Spec.DeskTitle),
+		body,
+		panels.Flash(vk.Fit(m.flash)),
+		vk.HintLine(hints...),
 	)
-	return layout.StackFit(m.heightTier(), sections...)
 }
 
-func (ss *specScreen) renderTicket(m *Model, focused bool) string {
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
-	}
+func (ss *specScreen) renderTicket(m *Model, vk layout.Frame) string {
 	kind := ss.posKind()
 	thesis := content.Text.Spec.CallThesis
 	if kind == economy.PosPut {
@@ -248,11 +264,7 @@ func (ss *specScreen) renderTicket(m *Model, focused bool) string {
 	)
 }
 
-func (ss *specScreen) renderPositions(m *Model, focused bool) string {
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
-	}
+func (ss *specScreen) renderPositions(m *Model, vk layout.Frame) string {
 	s := m.econ.Get()
 	if len(s.Positions) == 0 {
 		return vk.Panel(content.Text.Spec.PositionsPanel, theme.DimSty.Render(content.Text.Spec.PositionsEmpty))
@@ -290,19 +302,21 @@ func (ss *specScreen) renderPositions(m *Model, focused bool) string {
 	return vk.ScrollPanel(content.Text.Spec.PositionsPanel, lines, m.panelRows(positionRows), ss.positions.Offset)
 }
 
-func renderBook(m *Model) string {
-	vk := m.frame()
+func renderBook(m *Model, vk layout.Frame) string {
 	s := m.econ.Get()
 	data := []panels.Datum{
 		{Label: content.Text.Spec.MixCash, Value: s.Tokens},
 		{Label: content.Text.Spec.MixEggs, Value: s.Eggs * s.EggPrice()},
 		{Label: content.Text.Spec.MixExposure, Value: s.LeveragedExposure()},
 	}
-	return panels.Pie(vk, content.Text.Spec.MixPanel, data, 48, economy.FormatNum, content.Text.Spec.MixEmpty)
+	pieW := vk.Width
+	if pieW > 48 {
+		pieW = 48
+	}
+	return panels.Pie(vk, content.Text.Spec.MixPanel, data, pieW, economy.FormatNum, content.Text.Spec.MixEmpty)
 }
 
-func (ss *specScreen) renderPnL(m *Model) string {
-	vk := m.frame()
+func (ss *specScreen) renderPnL(m *Model, vk layout.Frame) string {
 	s := m.econ.Get()
 	price := s.EggPrice()
 	data := make([]panels.Datum, len(s.Positions))

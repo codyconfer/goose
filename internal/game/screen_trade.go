@@ -37,12 +37,36 @@ type tradeScreen struct {
 func (ts *tradeScreen) simulates() bool { return true }
 
 func (ts *tradeScreen) focusables(m *Model) layout.Ring {
+	return layout.PaneRing(ts.panes(m))
+}
+
+func (ts *tradeScreen) renderPurse(m *Model, vk layout.Frame) string {
 	s := m.econ.Get()
-	return layout.NewRing(
-		layout.Focusable{Name: "builder", Interactive: true},
-		layout.Focusable{Name: "queue", Interactive: len(s.Transactions) > 0},
-		layout.Focusable{Name: "ledger", Interactive: len(s.Ledger) > m.panelRows(ledgerRows)},
+	return vk.Panel(content.Text.Trade.PursePanel,
+		vk.Spread(theme.AccentSty.Render("🪙 "+economy.FormatNum(s.Tokens))+theme.DimSty.Render(" tokens"),
+			theme.AccentSty.Render("🥚 "+economy.FormatNum(s.Eggs))+theme.DimSty.Render(" eggs")),
+		vk.Row(content.Text.Trade.MarketPriceLabel, theme.ValSty.Render(economy.FormatNum(s.EggPrice())+" tokens/egg")),
+		vk.Row(content.Text.Trade.ConsumersPayLabel, theme.CanSty.Render(economy.FormatNum(s.SellPrice())+" tokens/egg")),
+		vk.Row(content.Text.Trade.TrendLabel, tradeTrendLabel(s)),
+		vk.Row(content.Text.Trade.TrendStrengthLabel, tradeTrendStrength(s)),
 	)
+}
+
+func (ts *tradeScreen) panes(m *Model) []layout.Pane {
+	s := m.econ.Get()
+	return []layout.Pane{
+		{Name: "purse", Render: func(f layout.Frame) string { return ts.renderPurse(m, cellFrame(f)) }},
+		{Name: "chart", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderPriceChart(m, cellFrame(f)) }},
+		{Name: "flow", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderFlow(m, cellFrame(f)) }},
+		{Name: "builder", Interactive: true, Render: func(f layout.Frame) string { return ts.renderBuilder(m, cellFrame(f)) }},
+		{Name: "queue", Interactive: len(s.Transactions) > 0, Render: func(f layout.Frame) string { return renderTransactions(m, cellFrame(f), ts.queue) }},
+		{
+			Name:        "ledger",
+			MinTier:     layout.TierMedium,
+			Interactive: len(s.Ledger) > m.panelRows(ledgerRows),
+			Render:      func(f layout.Frame) string { return renderLedger(m, cellFrame(f), ts.ledger) },
+		},
+	}
 }
 
 func (ts *tradeScreen) focusedPanel(m *Model) string {
@@ -154,16 +178,6 @@ func (ts *tradeScreen) schedule(m *Model) {
 func (ts *tradeScreen) view(m *Model) string {
 	vk := m.frame()
 	s := m.econ.Get()
-	purse := vk.Panel(content.Text.Trade.PursePanel,
-		vk.Spread(theme.AccentSty.Render("🪙 "+economy.FormatNum(s.Tokens))+theme.DimSty.Render(" tokens"),
-			theme.AccentSty.Render("🥚 "+economy.FormatNum(s.Eggs))+theme.DimSty.Render(" eggs")),
-		vk.Row(content.Text.Trade.MarketPriceLabel, theme.ValSty.Render(economy.FormatNum(s.EggPrice())+" tokens/egg")),
-		vk.Row(content.Text.Trade.ConsumersPayLabel, theme.CanSty.Render(economy.FormatNum(s.SellPrice())+" tokens/egg")),
-		vk.Row(content.Text.Trade.TrendLabel, tradeTrendLabel(s)),
-		vk.Row(content.Text.Trade.TrendStrengthLabel, tradeTrendStrength(s)),
-	)
-
-	focused := ts.focusedPanel(m)
 	km := tradeKeymap()
 	hints := [][2]string{
 		km.Hint(actToggleKind),
@@ -181,24 +195,17 @@ func (ts *tradeScreen) view(m *Model) string {
 		hints = append(hints, km.Hint(actOpenSpec))
 	}
 	hints = append(hints, km.Hint(keys.Cancel))
-	return layout.StackFit(m.heightTier(),
-		layout.Section{Content: vk.Header(content.Text.Trade.DeskTitle)},
-		layout.Section{Content: purse},
-		layout.Section{Content: renderPriceChart(m), MinTier: layout.TierTall},
-		layout.Section{Content: renderFlow(m), MinTier: layout.TierTall},
-		layout.Section{Content: ts.renderBuilder(m, focused == "builder")},
-		layout.Section{Content: renderTransactions(m, ts.queue, focused == "queue")},
-		layout.Section{Content: renderLedger(m, ts.ledger, focused == "ledger"), MinTier: layout.TierMedium},
-		layout.Section{Content: panels.Flash(vk.Fit(m.flash))},
-		layout.Section{Content: vk.HintLine(hints...)},
+
+	body := layout.Screen{Layout: layout.FlexGrid{}, Panes: ts.panes(m)}.Render(m.bodyFrame(), m.heightTier(), ts.focus)
+	return layout.Stack(
+		vk.Header(content.Text.Trade.DeskTitle),
+		body,
+		panels.Flash(vk.Fit(m.flash)),
+		vk.HintLine(hints...),
 	)
 }
 
-func (ts *tradeScreen) renderBuilder(m *Model, focused bool) string {
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
-	}
+func (ts *tradeScreen) renderBuilder(m *Model, vk layout.Frame) string {
 	dir := panels.Toggle(content.Text.Trade.BuyToggle, content.Text.Trade.SellToggle, ts.kind == economy.TxBuyEggs)
 
 	amt := ts.amount(m)
@@ -234,8 +241,7 @@ func (ts *tradeScreen) sizeLabel(m *Model) string {
 	return fmt.Sprintf(content.Text.Trade.MaxFmt, economy.FormatNum(ts.amount(m)))
 }
 
-func renderPriceChart(m *Model) string {
-	vk := m.frame()
+func renderPriceChart(m *Model, vk layout.Frame) string {
 	cs := m.candles
 	if len(cs) == 0 {
 		return vk.Panel(content.Text.Trade.PriceChartPanel, theme.DimSty.Render(content.Text.Trade.PriceChartGathering))
@@ -262,8 +268,7 @@ func renderPriceChart(m *Model) string {
 	return panels.Candle(vk, fmt.Sprintf(content.Text.Trade.PriceChartTitleFmt, beats), toOHLC(cs), width, priceChartHeight, economy.FormatNum, footer)
 }
 
-func renderFlow(m *Model) string {
-	vk := m.frame()
+func renderFlow(m *Model, vk layout.Frame) string {
 	s := m.econ.Get()
 	data := []panels.Datum{
 		{Label: content.Text.Trade.FlowLaying, Value: s.EggsPerSecond()},
@@ -281,11 +286,7 @@ func toOHLC(cs []candle) []panels.OHLC {
 	return out
 }
 
-func renderTransactions(m *Model, sv layout.ScrollState, focused bool) string {
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
-	}
+func renderTransactions(m *Model, vk layout.Frame, sv layout.ScrollState) string {
 	s := m.econ.Get()
 	var prefix []string
 
@@ -356,11 +357,7 @@ var (
 	feedRows     = layout.TierRows{Short: 3, Medium: 5, Tall: 8}
 )
 
-func renderLedger(m *Model, sv layout.ScrollState, focused bool) string {
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
-	}
+func renderLedger(m *Model, vk layout.Frame, sv layout.ScrollState) string {
 	led := m.econ.Get().Ledger
 	rows := make([]panels.LedgerRow, 0, len(led))
 	for _, tx := range slices.Backward(led) {
