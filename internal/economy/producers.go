@@ -55,6 +55,10 @@ func (m *Machine) BuyProducer(p Producer) bool {
 	m.s.Tokens -= cost
 	m.s.Owned[p.Key]++
 	m.record(Transaction{Kind: TxBuyProducer, Label: p.Name, Amount: 1, Tokens: -cost})
+	if p.Singularity {
+		m.s.Tokens = Singularity
+		m.s.Eggs = Singularity
+	}
 	return true
 }
 
@@ -98,8 +102,19 @@ func (m *Machine) seizeBest() {
 	}
 }
 
+const (
+	Singularity        = math.MaxFloat64
+	singularityDisplay = 1e18
+)
+
 func FormatNum(n float64) string {
 	abs := math.Abs(n)
+	if math.IsInf(n, 0) || abs >= singularityDisplay {
+		if n < 0 {
+			return "-∞"
+		}
+		return "∞"
+	}
 	switch {
 	case abs >= 1e15:
 		return fmt.Sprintf("%.2fQ", n/1e15)

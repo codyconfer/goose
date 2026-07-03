@@ -18,6 +18,7 @@ type Producer struct {
 	EggRate     float64 `json:"egg_rate"`
 	UnlockLevel int     `json:"unlock_level"`
 	Desc        string  `json:"desc"`
+	Singularity bool    `json:"singularity,omitempty"`
 }
 
 type Upgrade struct {
