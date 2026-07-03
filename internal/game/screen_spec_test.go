@@ -133,11 +133,14 @@ func TestSpecDeskScrollsPositionsAndClosesVisibleEntry(t *testing.T) {
 
 	m := New(econ, events.NewMachine(), 0)
 	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
-	m = send(m, key("pgdown"))
+	m = send(m, key("tab"))
+	for i := 0; i < 12; i++ {
+		m = send(m, key("down"))
+	}
 
 	ss := m.screen.(*specScreen)
 	if ss.positions.Offset == 0 {
-		t.Fatal("positions page-down did not advance the scroll offset")
+		t.Fatal("focused positions scroll did not advance the offset")
 	}
 	if got := m.View(); !strings.Contains(got, "5–12 of 12") {
 		t.Fatalf("positions footer missing scrolled range:\n%s", got)

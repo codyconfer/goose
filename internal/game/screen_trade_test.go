@@ -138,11 +138,14 @@ func TestTradeDeskQueueScrollsAndCancelsVisibleOrder(t *testing.T) {
 
 	m := New(econ, events.NewMachine(), 0)
 	m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
-	m = send(m, key("pgdown"))
+	m = send(m, key("tab"))
+	for i := 0; i < 12; i++ {
+		m = send(m, key("down"))
+	}
 
 	ts := m.screen.(*tradeScreen)
 	if ts.queue.Offset == 0 {
-		t.Fatal("queue page-down did not advance the scroll offset")
+		t.Fatal("focused queue scroll did not advance the offset")
 	}
 	if got := m.View(); !strings.Contains(got, "5–12 of 12") {
 		t.Fatalf("queue footer missing scrolled range:\n%s", got)

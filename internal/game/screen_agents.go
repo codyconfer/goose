@@ -134,19 +134,21 @@ func (as *agentsScreen) view(m *Model) string {
 		horizontalHint("size"),
 		hint("[ ]/-/+", "threshold"),
 	}
-	hints = append(hints, m.pageHintPairs()...)
 	hints = append(hints, hint("esc/a/q", "back"))
 	sections := []string{
 		vk.Header(content.Text.Agents.DeskTitle, content.Text.Agents.Subtitle),
-		as.renderRoster(m, agents),
+		as.renderRoster(m, agents, len(agents) > 0),
 		panels.Flash(vk.Fit(m.flash)),
 		vk.HintLine(hints...),
 	}
 	return panels.Stack(sections...)
 }
 
-func (as *agentsScreen) renderRoster(m *Model, agents []economy.Agent) string {
+func (as *agentsScreen) renderRoster(m *Model, agents []economy.Agent, focused bool) string {
 	vk := m.frame()
+	if focused {
+		vk = vk.Focus()
+	}
 	if len(agents) == 0 {
 		return vk.Panel(content.Text.Agents.Panel, theme.DimSty.Render(content.Text.Agents.Empty))
 	}
@@ -177,11 +179,12 @@ func (as *agentsScreen) renderRoster(m *Model, agents []economy.Agent) string {
 			selEnd = len(lines) - 1
 		}
 	}
+	rows := m.panelRows(agentRows)
 	if selStart >= 0 {
-		as.scroll.Reveal(selEnd, len(lines), agentRows)
-		as.scroll.Reveal(selStart, len(lines), agentRows)
+		as.scroll.Reveal(selEnd, len(lines), rows)
+		as.scroll.Reveal(selStart, len(lines), rows)
 	}
-	return vk.ScrollPanel(content.Text.Agents.Panel, lines, agentRows, as.scroll.Offset)
+	return vk.ScrollPanel(content.Text.Agents.Panel, lines, rows, as.scroll.Offset)
 }
 
 func agentRule(a economy.Agent) string {

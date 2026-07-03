@@ -79,7 +79,7 @@ func TestGameScreenMaxOptionHotkeyStaysLockedBelowSpecLevel(t *testing.T) {
 	if len(m.econ.Get().Positions) != 0 {
 		t.Fatalf("positions=%d, want none while locked", len(m.econ.Get().Positions))
 	}
-	if !strings.Contains(m.flash, "Derivatives Desk") {
-		t.Fatalf("expected derivatives lock flash, got %q", m.flash)
+	if feed := strings.Join(m.feed.lines(), "\n"); !strings.Contains(feed, "Derivatives Desk") {
+		t.Fatalf("expected derivatives lock message in feed, got %q", feed)
 	}
 }

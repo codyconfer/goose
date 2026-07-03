@@ -96,7 +96,14 @@ func (m *Machine) RunAgents() []AgentEvent {
 		if !a.Enabled || !a.fires(m.s) {
 			continue
 		}
-		if a.TradesOptions() && m.s.Level() < SpecUnlockLevel {
+		if a.TradesOptions() {
+			if m.s.Level() < SpecUnlockLevel {
+				continue
+			}
+			if len(m.s.Positions) >= agentQueueMax {
+				continue
+			}
+		} else if len(m.s.Transactions) >= agentQueueMax {
 			continue
 		}
 		var ok bool

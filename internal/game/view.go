@@ -105,6 +105,31 @@ func (m Model) renderActivity() string {
 	return theme.NotifIdleSty.Render(lipgloss.NewStyle().Width(m.frame().Width).Render(content.Text.Activity.Idle))
 }
 
+func (m Model) renderFeed(offset int, focused bool) string {
+	if !m.feed.active() {
+		return ""
+	}
+	vk := m.frame()
+	if focused {
+		vk = vk.Focus()
+	}
+	raw := m.feed.lines()
+	// Newest first, mirroring the ledgers, so offset 0 shows the latest activity
+	// and scrolling down walks back through history.
+	lines := make([]string, len(raw))
+	for i, ln := range raw {
+		lines[len(raw)-1-i] = theme.DimSty.Italic(true).Render(vk.Fit(ln))
+	}
+	return vk.ScrollPanel(content.Text.Feed.Panel, lines, m.panelRows(feedRows), offset)
+}
+
+// feedScrollable reports whether the feed holds more lines than its current
+// tier window can show, so the footer only advertises the scroll keys when they
+// would actually do something.
+func (m Model) feedScrollable() bool {
+	return m.feed.size() > m.panelRows(feedRows)
+}
+
 func (m Model) renderMarket() string {
 	vk := m.frame()
 	s := m.econ.Get()
@@ -125,35 +150,24 @@ func (m Model) renderMarket() string {
 	)
 }
 
-func (m Model) renderFooter() string {
-	hints := []([2]string){
-		confirmHint("generate"),
-		verticalHint("select"),
+func (m Model) renderFooter(focusVerb string, ringSize int) string {
+	hints := []([2]string){confirmHint("generate")}
+	hints = append(hints, focusHints(focusVerb, ringSize)...)
+	hints = append(hints,
 		hint("b/→/l", "buy"),
 		hint("s", "sell"),
 		hint("B/S", "max queue"),
 		hint("t", "trade"),
 		hint("a", "agents"),
-	}
+	)
 	if m.econ.Get().Level() >= economy.SpecUnlockLevel {
 		hints = append(hints,
 			hint("O/C", "max call"),
 			hint("P", "max put"),
 		)
 	}
-	hints = append(hints, m.pageHintPairs()...)
 	hints = append(hints, hint("esc/q", "quit"))
 	return m.frame().HintLine(hints...)
-}
-
-// pageHintPairs returns the ctrl+u/d page hint only when the current screen's
-// content actually overflows the viewport. The flag is measured in
-// clampPageScroll, so the legend never advertises paging that would be a no-op.
-func (m Model) pageHintPairs() [][2]string {
-	if m.scrollable {
-		return [][2]string{{"ctrl+u/d", "page"}}
-	}
-	return nil
 }
 
 func (m Model) renderNotification() string {
@@ -221,6 +235,38 @@ func (m Model) bodyBudget() int {
 	return rows
 }
 
+// heightTier maps the current body budget to a discrete layout tier. Screens
+// use it to pick which panels are worth showing; the viewport still clips any
+// overflow within the chosen tier. The unknown-height fallback in bodyBudget
+// lands in Medium, so the first frame shows the minimum-supported layout.
+func (m Model) heightTier() panels.Tier {
+	rows := m.bodyBudget()
+	switch {
+	case rows >= theme.TallBodyHeight-theme.AppMarginY*2:
+		return panels.TierTall
+	case rows >= theme.MinBodyHeight-theme.AppMarginY*2:
+		return panels.TierMedium
+	default:
+		return panels.TierShort
+	}
+}
+
+// tierRows is how many items a scroll panel shows at each height tier — fewer on
+// cramped screens, more when there's room.
+type tierRows struct{ short, medium, tall int }
+
+// panelRows resolves a tierRows to a concrete count for the current height tier.
+func (m Model) panelRows(r tierRows) int {
+	switch m.heightTier() {
+	case panels.TierTall:
+		return r.tall
+	case panels.TierMedium:
+		return r.medium
+	default:
+		return r.short
+	}
+}
+
 func (m Model) layoutViewport(body string) string {
 	rows := m.viewportRows()
 	if rows <= 0 {
@@ -280,9 +326,9 @@ func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
 
 	s := panels.ScrollState{Offset: m.pageScroll}
 	switch msg.String() {
-	case "ctrl+d":
+	case "pgdown":
 		s.Scroll(page, total, page)
-	case "ctrl+u":
+	case "pgup":
 		s.Scroll(-page, total, page)
 	default:
 		return false
@@ -296,17 +342,14 @@ func (m *Model) clampPageScroll() {
 	rows := m.scrollableRows(body)
 	if rows <= 0 || !panels.FitsScreenWidth(m.width) {
 		m.pageScroll = 0
-		m.scrollable = false
 		return
 	}
 
 	total := countLines(m.scrollableBody(body))
 	if total <= rows {
 		m.pageScroll = 0
-		m.scrollable = false
 		return
 	}
-	m.scrollable = true
 
 	page := rows - 1
 	if page < 1 {

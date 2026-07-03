@@ -44,6 +44,7 @@ var (
 
 	decommissionRefund = content.Balance.DecommissionRefund
 	ledgerMax          = content.Balance.LedgerMax
+	agentQueueMax      = content.Balance.AgentQueueMax
 
 	maxOfflineSeconds = content.Balance.MaxOfflineSeconds
 )

@@ -26,12 +26,13 @@ type Model struct {
 
 	width, height int
 	pageScroll    int
-	scrollable    bool
 
-	pulse    float64
-	flash    string
-	flashTTL int
-	offline  float64
+	pulse      float64
+	flash      string
+	flashTTL   int
+	offline    float64
+	offlineTTL int
+	feed       feed
 
 	sellRate    float64
 	priceAccum  float64
@@ -50,16 +51,16 @@ type Model struct {
 
 func New(s *economy.Machine, ev *events.Machine, offline float64) Model {
 	m := Model{
-		econ:    s,
-		events:  ev,
-		world:   world.Generate(world.DefaultSeed),
-		items:   capexItems(),
-		offline: offline,
-		clock:   newClock(time.Now()),
-		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
-		screen:  &gameScreen{},
-		notifs:  notify.NewQueue(notifQueueCap),
+		econ:   s,
+		events: ev,
+		world:  world.Generate(world.DefaultSeed),
+		items:  capexItems(),
+		clock:  newClock(time.Now()),
+		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
+		screen: &gameScreen{},
+		notifs: notify.NewQueue(notifQueueCap),
 	}
+	m.setOffline(offline)
 	m.loadPriceChart()
 	return m
 }
@@ -80,6 +81,15 @@ func (m Model) Init() tea.Cmd { return upBeat() }
 func (m *Model) setFlash(s string) {
 	m.flash = s
 	m.flashTTL = flashBeats
+}
+
+func (m *Model) setOffline(v float64) {
+	m.offline = v
+	if v > 0 {
+		m.offlineTTL = offlineBeats
+	} else {
+		m.offlineTTL = 0
+	}
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -155,13 +165,13 @@ func (m *Model) beatFast(dt float64) {
 			m.sellRate = m.sellRate*buyRateSmoothing + ((sold+rep.SoldEggs)/dt)*(1-buyRateSmoothing)
 		}
 		for _, o := range rep.Completed {
-			m.setFlash(tradeCompletedMsg(o))
+			m.feed.push(tradeCompletedMsg(o))
 		}
 		for _, res := range m.econ.TickPositions(dt) {
 			if res.MarginCall {
 				m.notifs.Push(marginCallNotif(res), notifBeats)
 			} else {
-				m.setFlash(positionSettleMsg(res))
+				m.feed.push(positionSettleMsg(res))
 			}
 		}
 	}
@@ -174,6 +184,11 @@ func (m *Model) beatFast(dt float64) {
 	if m.flashTTL > 0 {
 		if m.flashTTL--; m.flashTTL == 0 {
 			m.flash = ""
+		}
+	}
+	if m.offlineTTL > 0 {
+		if m.offlineTTL--; m.offlineTTL == 0 {
+			m.offline = 0
 		}
 	}
 	m.notifs.Beat()
@@ -198,7 +213,7 @@ func (m *Model) beatSlow() {
 	m.econ.UpdatePrice(m.priceAccum, m.rng)
 	m.priceAccum = 0
 	for _, ev := range m.econ.RunAgents() {
-		m.setFlash(agentFiredMsg(ev))
+		m.feed.push(agentFiredMsg(ev))
 	}
 	m.recordPrice()
 }

@@ -102,7 +102,7 @@ func (ms *menuScreen) choose(m *Model) tea.Cmd {
 		m.econ = econ
 		m.events = ev
 		m.world = wrld
-		m.offline = offline
+		m.setOffline(offline)
 		m.saveID = it.save.ID
 		m.saveName = it.save.Name
 		m.loadPriceChart()
@@ -125,7 +125,7 @@ func (m *Model) foundFlock(set economy.Settings, seed int64) {
 	m.econ.SetSettings(set)
 	m.events = events.NewMachine()
 	m.world = world.Generate(seed)
-	m.offline = 0
+	m.setOffline(0)
 	m.saveID = 0
 	m.saveName = ""
 	m.loadPriceChart()
@@ -231,14 +231,12 @@ func (ms *menuScreen) view(m *Model) string {
 			hint("enter", "save"),
 			hint("esc", "cancel"),
 		}
-		hints = append(hints, m.pageHintPairs()...)
 		b.WriteString(vk.HintLine(hints...))
 	case menuModeDelete:
 		hints := [][2]string{
 			hint("y", "delete"),
 			hint("n/esc/q", "cancel"),
 		}
-		hints = append(hints, m.pageHintPairs()...)
 		b.WriteString(vk.HintLine(hints...))
 	default:
 		hints := [][2]string{
@@ -248,7 +246,6 @@ func (ms *menuScreen) view(m *Model) string {
 			hint("r", "rename"),
 			hint("x/d", "delete"),
 		}
-		hints = append(hints, m.pageHintPairs()...)
 		hints = append(hints, hint("esc/q", "quit"))
 		b.WriteString(vk.HintLine(hints...))
 	}

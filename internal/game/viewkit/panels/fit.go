@@ -1,64 +1,29 @@
 package panels
 
-import "github.com/charmbracelet/lipgloss"
+// Tier is a discrete terminal-height band. Panels declare the smallest tier at
+// which they appear, so each band shows an explicitly authored set rather than
+// whatever a measure-and-drop pass happens to leave.
+type Tier int
+
+const (
+	TierShort  Tier = iota // cramped: bare essentials only (zero value)
+	TierMedium             // minimum-supported height: biggest panels drop
+	TierTall               // spacious: every panel shows
+)
 
 type Section struct {
-	Content  string
-	Priority int
+	Content string
+	MinTier Tier // smallest tier at which this section appears; zero = always
 }
 
-const Essential = 0
-
-func StackFit(budget int, sections ...Section) string {
-	kept := sections
-	if budget > 0 {
-		kept = fitSections(sections, budget)
-	}
-	contents := make([]string, len(kept))
-	for i, s := range kept {
-		contents[i] = s.Content
+// StackFit keeps the sections visible at tier (nested: short ⊆ medium ⊆ tall)
+// and stacks them. Overflow within a tier is left to the viewport to clip.
+func StackFit(tier Tier, sections ...Section) string {
+	contents := make([]string, 0, len(sections))
+	for _, s := range sections {
+		if tier >= s.MinTier {
+			contents = append(contents, s.Content)
+		}
 	}
 	return Stack(contents...)
-}
-
-func fitSections(sections []Section, budget int) []Section {
-	kept := make([]Section, len(sections))
-	copy(kept, sections)
-
-	for stackHeight(kept) > budget {
-		victim := droppableVictim(kept)
-		if victim < 0 {
-			break
-		}
-		kept = append(kept[:victim], kept[victim+1:]...)
-	}
-	return kept
-}
-
-func droppableVictim(sections []Section) int {
-	victim := -1
-	for i, s := range sections {
-		if s.Priority == Essential {
-			continue
-		}
-		if victim < 0 || s.Priority >= sections[victim].Priority {
-			victim = i
-		}
-	}
-	return victim
-}
-
-func stackHeight(sections []Section) int {
-	total, nonEmpty := 0, 0
-	for _, s := range sections {
-		if s.Content == "" {
-			continue
-		}
-		total += lipgloss.Height(s.Content)
-		nonEmpty++
-	}
-	if nonEmpty > 1 {
-		total += nonEmpty - 1
-	}
-	return total
 }

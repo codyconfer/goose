@@ -12,11 +12,44 @@ import (
 )
 
 type gameScreen struct {
-	cursor int
-	capex  panels.ScrollState
+	cursor     int
+	capex      panels.ScrollState
+	feedScroll panels.ScrollState
+	focus      int
 }
 
 func (gs *gameScreen) simulates() bool { return true }
+
+func (gs *gameScreen) focusables(m *Model) []string {
+	return focusNames(
+		focusable{"capex", true},
+		focusable{"feed", m.feedScrollable()},
+	)
+}
+
+func (gs *gameScreen) focusedPanel(m *Model) string {
+	return focusResolve(gs.focusables(m), gs.focus)
+}
+
+func (gs *gameScreen) focusMove(m *Model, delta int) {
+	switch gs.focusedPanel(m) {
+	case "capex":
+		if delta < 0 {
+			gs.cursor = m.prevVisible(gs.cursor)
+		} else {
+			gs.cursor = m.nextVisible(gs.cursor)
+		}
+	case "feed":
+		gs.feedScroll.Scroll(delta, m.feed.size(), m.panelRows(feedRows))
+	}
+}
+
+func (gs *gameScreen) focusVerb(m *Model) string {
+	if gs.focusedPanel(m) == "feed" {
+		return "scroll feed"
+	}
+	return "select"
+}
 
 func (gs *gameScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
@@ -26,15 +59,19 @@ func (gs *gameScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		return tea.Quit
 	case "enter", " ", "spacebar":
 		if m.econ.Get().Frozen() {
-			m.setFlash("🚫 Shut down — the subcommittee says the geese may not honk right now.")
+			m.feed.push("🚫 Shut down — the subcommittee says the geese may not honk right now.")
 		} else {
 			m.econ.Tap()
 			m.pulse = 1
 		}
 	case "up", "k":
-		gs.cursor = m.prevVisible(gs.cursor)
+		gs.focusMove(m, -1)
 	case "down", "j":
-		gs.cursor = m.nextVisible(gs.cursor)
+		gs.focusMove(m, 1)
+	case "tab":
+		gs.focus = focusStep(gs.focusables(m), gs.focus, 1)
+	case "shift+tab":
+		gs.focus = focusStep(gs.focusables(m), gs.focus, -1)
 	case "b", "right", "l":
 		gs.buy(m)
 	case "s":
@@ -61,9 +98,9 @@ func (gs *gameScreen) buy(m *Model) {
 	}
 	it := m.items[gs.cursor]
 	if it.buy(m.econ) {
-		m.setFlash(it.boughtMsg(m.econ.Get()))
+		m.feed.push(it.boughtMsg(m.econ.Get()))
 	} else {
-		m.setFlash(it.deniedMsg())
+		m.feed.push(it.deniedMsg())
 	}
 }
 
@@ -73,9 +110,9 @@ func (gs *gameScreen) sell(m *Model) {
 	}
 	it := m.items[gs.cursor]
 	if it.sell(m.econ) {
-		m.setFlash(it.soldMsg(m.econ.Get()))
+		m.feed.push(it.soldMsg(m.econ.Get()))
 	} else {
-		m.setFlash(it.cantSellMsg())
+		m.feed.push(it.cantSellMsg())
 	}
 }
 
@@ -86,11 +123,9 @@ func (gs *gameScreen) queueMaxTrade(m *Model, kind economy.TxKind) {
 
 func (gs *gameScreen) openMaxPosition(m *Model, kind economy.PosKind) {
 	if m.econ.Get().Level() < economy.SpecUnlockLevel {
-		m.setFlash(fmt.Sprintf(content.Text.Trade.SpecLockedFmt, economy.SpecUnlockLevel))
+		m.feed.push(fmt.Sprintf(content.Text.Trade.SpecLockedFmt, economy.SpecUnlockLevel))
 		return
 	}
-	// Calls and puts can be opened on credit, so when nothing is affordable we
-	// still open the smallest premium and let it push tokens negative.
 	premiumIdx := maxAffordableSpecPremiumIdx(m.econ.Get().Tokens)
 	if premiumIdx < 0 {
 		premiumIdx = 0
@@ -106,45 +141,56 @@ func (gs *gameScreen) openMaxPosition(m *Model, kind economy.PosKind) {
 func (gs *gameScreen) view(m *Model) string {
 	s := m.econ.Get()
 	sections := []panels.Section{
-		{Content: m.renderTitleBar(), Priority: panels.Essential},
-		{Content: m.renderStatus(), Priority: panels.Essential},
+		{Content: m.renderTitleBar()},
+		{Content: m.renderStatus()},
 	}
 	if s.Frozen() {
-		sections = append(sections, panels.Section{Content: m.renderShutdown(), Priority: panels.Essential})
+		sections = append(sections, panels.Section{Content: m.renderShutdown()})
 	}
-	sections = append(sections, panels.Section{Content: gs.renderCapex(m), Priority: panels.Essential})
+	focused := gs.focusedPanel(m)
+	sections = append(sections, panels.Section{Content: gs.renderCapex(m, focused == "capex")})
 	if s.EggsPerSecond() > 0 || s.Eggs > 0 {
-		sections = append(sections, panels.Section{Content: m.renderMarket(), Priority: 40})
+		sections = append(sections, panels.Section{Content: m.renderMarket(), MinTier: panels.TierTall})
 	}
 	if len(s.Transactions) > 0 || s.Demand() > 0 {
-		sections = append(sections, panels.Section{Content: renderTransactions(m, panels.ScrollState{}), Priority: 30})
+		sections = append(sections, panels.Section{Content: renderTransactions(m, panels.ScrollState{}, false), MinTier: panels.TierTall})
 	}
 	sections = append(sections,
-		panels.Section{Content: m.renderActivity(), Priority: 20},
-		panels.Section{Content: m.renderTapper(), Priority: panels.Essential},
-		panels.Section{Content: panels.Flash(m.flash), Priority: 10},
-		panels.Section{Content: m.renderFooter(), Priority: panels.Essential},
+		panels.Section{Content: m.renderActivity(), MinTier: panels.TierMedium},
+		panels.Section{Content: m.renderTapper()},
+		panels.Section{Content: m.renderFeed(gs.feedScroll.Offset, focused == "feed")},
+		panels.Section{Content: m.renderFooter(gs.focusVerb(m), len(gs.focusables(m)))},
 	)
-	return panels.StackFit(m.bodyBudget(), sections...)
+	return panels.StackFit(m.heightTier(), sections...)
 }
 
-func (gs *gameScreen) renderCapex(m *Model) string {
+func (gs *gameScreen) renderCapex(m *Model, focused bool) string {
 	vk := m.frame()
+	if focused {
+		vk = vk.Focus()
+	}
 	var lines []string
-	selected := 0
+	selStart, selEnd := 0, 0
 	for i, it := range m.items {
-		if m.unlocked(it) {
-			if i == gs.cursor {
-				selected = len(lines)
-			}
-			lines = append(lines, gs.capexRow(m, i, it))
+		if !m.unlocked(it) {
+			continue
+		}
+		if i == gs.cursor {
+			selStart = len(lines)
+		}
+		lines = append(lines, gs.capexRow(m, i, it))
+		if i == gs.cursor {
+			lines = append(lines, theme.DimSty.Width(vk.Width-5).MarginLeft(5).Render(it.desc()))
+			selEnd = len(lines) - 1
 		}
 	}
 	if teaser, ok := m.nextLockedTeaser(); ok {
 		lines = append(lines, teaser)
 	}
-	gs.capex.Reveal(selected, len(lines), capexRows)
-	return vk.ScrollPanel(content.Text.Capex.Panel, lines, capexRows, gs.capex.Offset)
+	rows := m.panelRows(capexRows)
+	gs.capex.Reveal(selEnd, len(lines), rows)
+	gs.capex.Reveal(selStart, len(lines), rows)
+	return vk.ScrollPanel(content.Text.Capex.Panel, lines, rows, gs.capex.Offset)
 }
 
 func (gs *gameScreen) capexRow(m *Model, i int, it capexItem) string {
@@ -165,11 +211,7 @@ func (gs *gameScreen) capexRow(m *Model, i int, it capexItem) string {
 	left := cursor + it.icon() + " " + nameStr
 	right := theme.DimSty.Render(fmt.Sprintf("%6s", it.owned(s))) + "  " + costSty.Render(fmt.Sprintf("%9s 🪙", economy.FormatNum(cost)))
 
-	row := vk.Spread(left, right)
-	if selected {
-		row += "\n" + theme.DimSty.Width(vk.Width-5).MarginLeft(5).Render(it.desc())
-	}
-	return row
+	return vk.Spread(left, right)
 }
 
 func (m Model) nextLockedTeaser() (string, bool) {

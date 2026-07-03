@@ -9,7 +9,8 @@ import (
 )
 
 type Frame struct {
-	Width int
+	Width   int
+	Focused bool // draw the panel border highlighted to mark keyboard focus
 }
 
 func NewFrame(width int) Frame {
@@ -20,6 +21,12 @@ func NewFrame(width int) Frame {
 		width = theme.MinBodyWidth
 	}
 	return Frame{Width: width}
+}
+
+// Focus returns a copy of the frame that renders panels with the focused border.
+func (f Frame) Focus() Frame {
+	f.Focused = true
+	return f
 }
 
 func DefaultFrame() Frame { return NewFrame(theme.BodyWidth) }
@@ -102,7 +109,11 @@ func Box(lines ...string) string {
 }
 
 func (f Frame) Box(lines ...string) string {
-	return theme.PanelSty.Width(f.bodyWidth() + 2).Render(strings.Join(lines, "\n"))
+	sty := theme.PanelSty
+	if f.Focused {
+		sty = theme.PanelFocusSty
+	}
+	return sty.Width(f.bodyWidth() + 2).Render(strings.Join(lines, "\n"))
 }
 
 func Panel(title string, lines ...string) string {

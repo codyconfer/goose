@@ -28,9 +28,47 @@ type tradeScreen struct {
 	sizeIdx int
 	queue   panels.ScrollState
 	ledger  panels.ScrollState
+	focus   int
 }
 
 func (ts *tradeScreen) simulates() bool { return true }
+
+func (ts *tradeScreen) focusables(m *Model) []string {
+	s := m.econ.Get()
+	return focusNames(
+		focusable{"builder", true},
+		focusable{"queue", len(s.Transactions) > 0},
+		focusable{"ledger", len(s.Ledger) > m.panelRows(ledgerRows)},
+	)
+}
+
+func (ts *tradeScreen) focusedPanel(m *Model) string {
+	return focusResolve(ts.focusables(m), ts.focus)
+}
+
+func (ts *tradeScreen) focusMove(m *Model, delta int) {
+	s := m.econ.Get()
+	switch ts.focusedPanel(m) {
+	case "builder":
+		// Preserve the historic mapping where up grows the order size.
+		ts.sizeIdx = panels.StepIndex(ts.sizeIdx, -delta, len(tradeSizes)+1)
+	case "queue":
+		ts.queue.Scroll(delta, len(s.Transactions), m.panelRows(queueRows))
+	case "ledger":
+		ts.ledger.Scroll(delta, len(s.Ledger), m.panelRows(ledgerRows))
+	}
+}
+
+func (ts *tradeScreen) focusVerb(m *Model) string {
+	switch ts.focusedPanel(m) {
+	case "queue":
+		return "queue"
+	case "ledger":
+		return "ledger"
+	default:
+		return "amount"
+	}
+}
 
 func (ts *tradeScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
@@ -42,12 +80,16 @@ func (ts *tradeScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		m.screen = ts.prev
 	case "d":
 		ts.openSpec(m)
-	case "left", "h", "right", "l", "tab":
+	case "left", "h", "right", "l":
 		ts.toggleKind()
 	case "up", "k":
-		ts.sizeIdx = panels.StepIndex(ts.sizeIdx, 1, len(tradeSizes)+1)
+		ts.focusMove(m, -1)
 	case "down", "j":
-		ts.sizeIdx = panels.StepIndex(ts.sizeIdx, -1, len(tradeSizes)+1)
+		ts.focusMove(m, 1)
+	case "tab":
+		ts.focus = focusStep(ts.focusables(m), ts.focus, 1)
+	case "shift+tab":
+		ts.focus = focusStep(ts.focusables(m), ts.focus, -1)
 	case "enter", " ", "spacebar":
 		ts.schedule(m)
 	case "c":
@@ -59,14 +101,6 @@ func (ts *tradeScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		if m.econ.CancelTransaction(ts.queue.Offset) {
 			m.setFlash(content.Text.Trade.CancelledFlash)
 		}
-	case "pgup":
-		ts.queue.Scroll(-queueRows, len(m.econ.Get().Transactions), queueRows)
-	case "pgdown":
-		ts.queue.Scroll(queueRows, len(m.econ.Get().Transactions), queueRows)
-	case ",":
-		ts.ledger.Scroll(-ledgerRows, len(m.econ.Get().Ledger), ledgerRows)
-	case ".":
-		ts.ledger.Scroll(ledgerRows, len(m.econ.Get().Ledger), ledgerRows)
 	}
 	return nil
 }
@@ -122,35 +156,36 @@ func (ts *tradeScreen) view(m *Model) string {
 		vk.Row(content.Text.Trade.TrendStrengthLabel, tradeTrendStrength(s)),
 	)
 
-	hints := []([2]string){
-		toggleHint("buy/sell"),
-		verticalHint("amount"),
+	focused := ts.focusedPanel(m)
+	hints := []([2]string){toggleHint("buy/sell")}
+	hints = append(hints, focusHints(ts.focusVerb(m), len(ts.focusables(m)))...)
+	hints = append(hints,
 		confirmHint("queue"),
 		hint("x", "cancel"),
 		hint("c", "clear"),
-		hint("pgup/pgdn", "queue"),
-		hint(",/.", "ledger"),
-	}
-	hints = append(hints, m.pageHintPairs()...)
+	)
 	if s.Level() >= economy.SpecUnlockLevel {
 		hints = append(hints, hint("d", "derivatives"))
 	}
 	hints = append(hints, hint("esc/t/q", "back"))
-	return panels.StackFit(m.bodyBudget(),
-		panels.Section{Content: vk.Header(content.Text.Trade.DeskTitle), Priority: panels.Essential},
-		panels.Section{Content: purse, Priority: panels.Essential},
-		panels.Section{Content: renderPriceChart(m), Priority: 40},
-		panels.Section{Content: renderFlow(m), Priority: 30},
-		panels.Section{Content: ts.renderBuilder(m), Priority: panels.Essential},
-		panels.Section{Content: renderTransactions(m, ts.queue), Priority: panels.Essential},
-		panels.Section{Content: renderLedger(m, ts.ledger), Priority: 20},
-		panels.Section{Content: panels.Flash(vk.Fit(m.flash)), Priority: 10},
-		panels.Section{Content: vk.HintLine(hints...), Priority: panels.Essential},
+	return panels.StackFit(m.heightTier(),
+		panels.Section{Content: vk.Header(content.Text.Trade.DeskTitle)},
+		panels.Section{Content: purse},
+		panels.Section{Content: renderPriceChart(m), MinTier: panels.TierTall},
+		panels.Section{Content: renderFlow(m), MinTier: panels.TierTall},
+		panels.Section{Content: ts.renderBuilder(m, focused == "builder")},
+		panels.Section{Content: renderTransactions(m, ts.queue, focused == "queue")},
+		panels.Section{Content: renderLedger(m, ts.ledger, focused == "ledger"), MinTier: panels.TierMedium},
+		panels.Section{Content: panels.Flash(vk.Fit(m.flash))},
+		panels.Section{Content: vk.HintLine(hints...)},
 	)
 }
 
-func (ts *tradeScreen) renderBuilder(m *Model) string {
+func (ts *tradeScreen) renderBuilder(m *Model, focused bool) string {
 	vk := m.frame()
+	if focused {
+		vk = vk.Focus()
+	}
 	dir := panels.Toggle(content.Text.Trade.BuyToggle, content.Text.Trade.SellToggle, ts.kind == economy.TxBuyEggs)
 
 	amt := ts.amount(m)
@@ -233,8 +268,11 @@ func toOHLC(cs []candle) []panels.OHLC {
 	return out
 }
 
-func renderTransactions(m *Model, sv panels.ScrollState) string {
+func renderTransactions(m *Model, sv panels.ScrollState, focused bool) string {
 	vk := m.frame()
+	if focused {
+		vk = vk.Focus()
+	}
 	s := m.econ.Get()
 	var prefix []string
 
@@ -260,7 +298,7 @@ func renderTransactions(m *Model, sv panels.ScrollState) string {
 	if len(lines) == 0 {
 		return vk.Panel(content.Text.Trade.QueuePanel, append(prefix, theme.DimSty.Render(content.Text.Trade.QueueQuiet))...)
 	}
-	return vk.ScrollPanelWithPrefix(content.Text.Trade.QueuePanel, prefix, lines, queueRows, sv.Offset)
+	return vk.ScrollPanelWithPrefix(content.Text.Trade.QueuePanel, prefix, lines, m.panelRows(queueRows), sv.Offset)
 }
 
 func tradeVerb(k economy.TxKind) string {
@@ -293,23 +331,29 @@ func tradeCompletedMsg(o economy.Transaction) string {
 	return fmt.Sprintf(content.Text.Trade.CompletedBuyFmt, economy.FormatNum(o.Amount))
 }
 
-const (
-	capexRows    = 8
-	ledgerRows   = 8
-	pnlRows      = 8
-	positionRows = 8
-	queueRows    = 8
-	agentRows    = 8
+const feedHistory = 50
+
+var (
+	capexRows    = tierRows{short: 4, medium: 8, tall: 14}
+	ledgerRows   = tierRows{short: 3, medium: 8, tall: 12}
+	pnlRows      = tierRows{short: 3, medium: 8, tall: 12}
+	positionRows = tierRows{short: 3, medium: 8, tall: 12}
+	queueRows    = tierRows{short: 3, medium: 8, tall: 12}
+	agentRows    = tierRows{short: 4, medium: 8, tall: 14}
+	feedRows     = tierRows{short: 3, medium: 5, tall: 8}
 )
 
-func renderLedger(m *Model, sv panels.ScrollState) string {
+func renderLedger(m *Model, sv panels.ScrollState, focused bool) string {
 	vk := m.frame()
+	if focused {
+		vk = vk.Focus()
+	}
 	led := m.econ.Get().Ledger
 	rows := make([]panels.LedgerRow, 0, len(led))
 	for _, tx := range slices.Backward(led) {
 		rows = append(rows, panels.LedgerRow{Label: ledgerDesc(tx), Delta: tx.Tokens})
 	}
-	return vk.Ledger(content.Text.Trade.LedgerPanel, rows, "🪙", economy.FormatNum, ledgerRows, sv.Offset, content.Text.Trade.LedgerEmpty)
+	return vk.Ledger(content.Text.Trade.LedgerPanel, rows, "🪙", economy.FormatNum, m.panelRows(ledgerRows), sv.Offset, content.Text.Trade.LedgerEmpty)
 }
 
 func ledgerDesc(tx economy.Transaction) string {

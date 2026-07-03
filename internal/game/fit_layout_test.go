@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
 	"github.com/codyconfer/goose/internal/game/viewkit/theme"
@@ -106,6 +107,25 @@ func TestSpecDeskFitsMinHeight(t *testing.T) {
 	assertFitsMinHeight(t, "spec desk", v)
 
 	assertContains(t, "spec desk", v, "WRITE A CONTRACT", "OPEN POSITIONS")
+}
+
+func TestGameScreenShortTierDropsMediumPanels(t *testing.T) {
+	s := economy.NewState()
+	s.Tokens = 1_000_000
+	s.Eggs = 500
+	s.Owned["server"] = 5
+	m := New(economy.FromState(s), events.NewMachine(), 0)
+	m.width = theme.MinScreenWidth
+	m.height = 20
+
+	v := m.View()
+	if h := lipgloss.Height(v); h > m.height {
+		t.Errorf("short game screen rendered %d rows, exceeds height %d:\n%s", h, m.height, v)
+	}
+	assertContains(t, "short game screen", v, "🪿", "generate")
+	if strings.Contains(v, content.Text.Market.Panel) {
+		t.Errorf("market (tall) should be dropped in short tier:\n%s", v)
+	}
 }
 
 func TestStartupUnknownHeightFitsEssentials(t *testing.T) {

@@ -71,6 +71,7 @@ type balanceData struct {
 
 	DecommissionRefund float64 `json:"decommission_refund"`
 	LedgerMax          int     `json:"ledger_max"`
+	AgentQueueMax      int     `json:"agent_queue_max"`
 
 	MaxOfflineSeconds int64 `json:"max_offline_seconds"`
 }
@@ -82,6 +83,7 @@ type tuningData struct {
 	NotifBeats            int `json:"notif_beats"`
 	OutcomeBeats          int `json:"outcome_beats"`
 	CharacterTimeoutBeats int `json:"character_timeout_beats"`
+	OfflineBeats          int `json:"offline_beats"`
 
 	NotifQueueCap int `json:"notif_queue_cap"`
 
@@ -133,6 +135,9 @@ type textData struct {
 	Activity struct {
 		Idle string `json:"idle"`
 	} `json:"activity"`
+	Feed struct {
+		Panel string `json:"panel"`
+	} `json:"feed"`
 	Market struct {
 		Panel          string `json:"panel"`
 		PriceSteady    string `json:"price_steady"`

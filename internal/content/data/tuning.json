@@ -1,12 +1,13 @@
 {
   "up_beat_rate_ms": 300,
 
-  "flash_beats": 4,
-  "notif_beats": 15,
+  "flash_beats": 20,
+  "notif_beats": 20,
   "outcome_beats": 20,
-  "character_timeout_beats": 23,
+  "character_timeout_beats": 20,
+  "offline_beats": 40,
 
-  "notif_queue_cap": 8,
+  "notif_queue_cap": 12,
 
   "pulse_decay_rate": 3.0,
   "buy_rate_smoothing": 0.8
