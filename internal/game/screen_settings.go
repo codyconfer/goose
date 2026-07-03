@@ -9,10 +9,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/codyconfer/viewkit/keys"
+	"github.com/codyconfer/viewkit/panels"
+	"github.com/codyconfer/viewkit/theme"
+
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/game/viewkit/panels"
-	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 )
 
 type settingRow struct {
@@ -68,40 +70,8 @@ func (ss *settingsScreen) seedValue() int64 {
 func (ss *settingsScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 	total := len(ss.rows) + 1
 	ss.cursor = panels.ClampIndex(ss.cursor, total)
-	switch msg.String() {
-	case "ctrl+c":
-		m.quitting = true
-		return tea.Quit
-	case "esc", "q":
-		m.screen = &menuScreen{items: menuItems(m.saves)}
-	case "up", "k":
-		ss.cursor = panels.MoveIndex(ss.cursor, -1, total)
-	case "down", "j":
-		ss.cursor = panels.MoveIndex(ss.cursor, 1, total)
-	case "left", "h":
-		if ss.cursor < len(ss.rows) {
-			r := &ss.rows[ss.cursor]
-			r.idx = panels.StepIndex(r.idx, -1, len(r.spec.Options))
-		}
-	case "right", "l":
-		if ss.cursor < len(ss.rows) {
-			r := &ss.rows[ss.cursor]
-			r.idx = panels.StepIndex(r.idx, 1, len(r.spec.Options))
-		}
-	case "r":
-		if ss.cursor == len(ss.rows) {
-			ss.seed = fmt.Sprintf("%d", time.Now().UnixNano())
-		}
-	case "backspace", "ctrl+h":
-		if ss.cursor == len(ss.rows) {
-			rs := []rune(ss.seed)
-			if len(rs) > 0 {
-				ss.seed = string(rs[:len(rs)-1])
-			}
-		}
-	case "enter", " ", "spacebar":
-		m.foundFlock(ss.settings(), ss.seedValue())
-	default:
+	action, ok := settingsKeymap().Action(msg.String())
+	if !ok {
 		if ss.cursor == len(ss.rows) {
 			for _, r := range msg.Runes {
 				if unicode.IsDigit(r) || (r == '-' && ss.seed == "") {
@@ -109,6 +79,41 @@ func (ss *settingsScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 				}
 			}
 		}
+		return nil
+	}
+	switch action {
+	case keys.Quit:
+		m.quitting = true
+		return tea.Quit
+	case keys.Cancel:
+		m.screen = &menuScreen{items: menuItems(m.saves)}
+	case keys.Up:
+		ss.cursor = panels.MoveIndex(ss.cursor, -1, total)
+	case keys.Down:
+		ss.cursor = panels.MoveIndex(ss.cursor, 1, total)
+	case keys.Left:
+		if ss.cursor < len(ss.rows) {
+			r := &ss.rows[ss.cursor]
+			r.idx = panels.StepIndex(r.idx, -1, len(r.spec.Options))
+		}
+	case keys.Right:
+		if ss.cursor < len(ss.rows) {
+			r := &ss.rows[ss.cursor]
+			r.idx = panels.StepIndex(r.idx, 1, len(r.spec.Options))
+		}
+	case actReroll:
+		if ss.cursor == len(ss.rows) {
+			ss.seed = fmt.Sprintf("%d", time.Now().UnixNano())
+		}
+	case keys.Erase:
+		if ss.cursor == len(ss.rows) {
+			rs := []rune(ss.seed)
+			if len(rs) > 0 {
+				ss.seed = string(rs[:len(rs)-1])
+			}
+		}
+	case keys.Confirm:
+		m.foundFlock(ss.settings(), ss.seedValue())
 	}
 	return nil
 }
@@ -130,7 +135,7 @@ func (ss *settingsScreen) view(m *Model) string {
 
 		valSty := theme.ValSty
 		if selected {
-			valSty = theme.EggSty
+			valSty = theme.AccentSty
 		}
 		left, right := "  ", "  "
 		if selected {
@@ -154,7 +159,7 @@ func (ss *settingsScreen) view(m *Model) string {
 	seedSelected := cursor == len(ss.rows)
 	seedValue := theme.ValSty.Render(ss.seed)
 	if seedSelected {
-		seedValue = theme.EggSty.Render(ss.seed)
+		seedValue = theme.AccentSty.Render(ss.seed)
 	}
 	b.WriteString(vk.Spread(vk.Selectable("World Seed", seedSelected), seedValue))
 	b.WriteString("\n")
@@ -166,18 +171,19 @@ func (ss *settingsScreen) view(m *Model) string {
 	if m.flash != "" {
 		b.WriteString(panels.Flash(vk.Fit(m.flash)) + "\n\n")
 	}
-	hints := [][2]string{verticalHint("setting")}
+	km := settingsKeymap()
+	hints := [][2]string{km.Hint(keys.Up)}
 	if seedSelected {
 		hints = append(hints,
-			hint("digits/-", "seed"),
-			hint("backspace", "erase"),
-			hint("r", "reroll seed"),
+			[2]string{"digits/-", "seed"},
+			km.Hint(keys.Erase),
+			km.Hint(actReroll),
 		)
 	} else {
-		hints = append(hints, horizontalHint("change"))
+		hints = append(hints, km.Hint(keys.Left))
 	}
-	hints = append(hints, confirmHint("hatch flock"))
-	hints = append(hints, hint("esc/q", "back"))
+	hints = append(hints, km.Hint(keys.Confirm))
+	hints = append(hints, km.Hint(keys.Cancel))
 	b.WriteString(vk.HintLine(hints...))
 	return b.String()
 }

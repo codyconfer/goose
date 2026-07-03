@@ -6,30 +6,32 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/codyconfer/viewkit/keys"
+	"github.com/codyconfer/viewkit/layout"
+	"github.com/codyconfer/viewkit/theme"
+
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/game/viewkit/panels"
-	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 )
 
 type gameScreen struct {
 	cursor     int
-	capex      panels.ScrollState
-	feedScroll panels.ScrollState
+	capex      layout.ScrollState
+	feedScroll layout.ScrollState
 	focus      int
 }
 
 func (gs *gameScreen) simulates() bool { return true }
 
-func (gs *gameScreen) focusables(m *Model) []string {
-	return focusNames(
-		focusable{"capex", true},
-		focusable{"feed", m.feedScrollable()},
+func (gs *gameScreen) focusables(m *Model) layout.Ring {
+	return layout.NewRing(
+		layout.Focusable{Name: "capex", Interactive: true},
+		layout.Focusable{Name: "feed", Interactive: m.feedScrollable()},
 	)
 }
 
 func (gs *gameScreen) focusedPanel(m *Model) string {
-	return focusResolve(gs.focusables(m), gs.focus)
+	return gs.focusables(m).At(gs.focus)
 }
 
 func (gs *gameScreen) focusMove(m *Model, delta int) {
@@ -52,42 +54,48 @@ func (gs *gameScreen) focusVerb(m *Model) string {
 	return "select"
 }
 
+func (gs *gameScreen) keys() *keys.Map { return gameKeymap() }
+
 func (gs *gameScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
-	switch msg.String() {
-	case "ctrl+c", "q", "esc":
+	action, ok := gs.keys().Action(msg.String())
+	if !ok {
+		return nil
+	}
+	switch action {
+	case keys.Quit:
 		m.quitting = true
 		_ = m.save()
 		return tea.Quit
-	case "enter", " ", "spacebar":
+	case keys.Confirm:
 		if m.econ.Get().Frozen() {
 			m.feed.push("🚫 Shut down — the subcommittee says the geese may not honk right now.")
 		} else {
 			m.econ.Tap()
 			m.pulse = 1
 		}
-	case "up", "k":
+	case keys.Up:
 		gs.focusMove(m, -1)
-	case "down", "j":
+	case keys.Down:
 		gs.focusMove(m, 1)
-	case "tab":
-		gs.focus = focusStep(gs.focusables(m), gs.focus, 1)
-	case "shift+tab":
-		gs.focus = focusStep(gs.focusables(m), gs.focus, -1)
-	case "b", "right", "l":
+	case keys.FocusNext:
+		gs.focus = gs.focusables(m).Step(gs.focus, 1)
+	case keys.FocusPrev:
+		gs.focus = gs.focusables(m).Step(gs.focus, -1)
+	case actBuy:
 		gs.buy(m)
-	case "s":
+	case actSell:
 		gs.sell(m)
-	case "B":
+	case actMaxBuy:
 		gs.queueMaxTrade(m, economy.TxBuyEggs)
-	case "S":
+	case actMaxSell:
 		gs.queueMaxTrade(m, economy.TxSellEggs)
-	case "O", "C":
+	case actMaxCall:
 		gs.openMaxPosition(m, economy.PosCall)
-	case "P":
+	case actMaxPut:
 		gs.openMaxPosition(m, economy.PosPut)
-	case "t":
+	case actOpenTrade:
 		m.screen = &tradeScreen{prev: gs, kind: economy.TxBuyEggs}
-	case "a":
+	case actOpenAgents:
 		m.screen = &agentsScreen{prev: gs}
 	}
 	return nil
@@ -141,30 +149,30 @@ func (gs *gameScreen) openMaxPosition(m *Model, kind economy.PosKind) {
 
 func (gs *gameScreen) view(m *Model) string {
 	s := m.econ.Get()
-	sections := []panels.Section{
+	sections := []layout.Section{
 		{Content: m.renderTitleBar()},
 		{Content: m.renderStatus()},
 	}
 	if s.Frozen() {
-		sections = append(sections, panels.Section{Content: m.renderShutdown()})
+		sections = append(sections, layout.Section{Content: m.renderShutdown()})
 	}
 	focused := gs.focusedPanel(m)
-	sections = append(sections, panels.Section{Content: gs.renderCapex(m, focused == "capex")})
+	sections = append(sections, layout.Section{Content: gs.renderCapex(m, focused == "capex")})
 	if s.EggsPerSecond() > 0 || s.Eggs > 0 {
-		sections = append(sections, panels.Section{Content: m.renderMarket(), MinTier: panels.TierTall})
+		sections = append(sections, layout.Section{Content: m.renderMarket(), MinTier: layout.TierTall})
 	}
 	if len(s.Transactions) > 0 || s.Demand() > 0 {
-		sections = append(sections, panels.Section{Content: renderTransactions(m, panels.ScrollState{}, false), MinTier: panels.TierTall})
+		sections = append(sections, layout.Section{Content: renderTransactions(m, layout.ScrollState{}, false), MinTier: layout.TierTall})
 	}
 	sections = append(sections,
-		panels.Section{Content: m.renderFeed(gs.feedScroll.Offset, focused == "feed")},
-		panels.Section{Content: m.renderActivity(), MinTier: panels.TierMedium},
-		panels.Section{Content: lipgloss.JoinVertical(lipgloss.Left,
+		layout.Section{Content: m.renderFeed(gs.feedScroll.Offset, focused == "feed")},
+		layout.Section{Content: m.renderActivity(), MinTier: layout.TierMedium},
+		layout.Section{Content: lipgloss.JoinVertical(lipgloss.Left,
 			m.renderTapper(),
-			m.renderFooter(gs.focusVerb(m), len(gs.focusables(m))),
+			m.renderFooter(gs.keys(), gs.focusVerb(m), len(gs.focusables(m))),
 		)},
 	)
-	return panels.StackFit(m.heightTier(), sections...)
+	return layout.StackFit(m.heightTier(), sections...)
 }
 
 func (gs *gameScreen) renderCapex(m *Model, focused bool) string {
@@ -202,9 +210,9 @@ func (gs *gameScreen) capexRow(m *Model, i int, it capexItem) string {
 	cost := it.cost(s)
 
 	selected := i == gs.cursor
-	cursor, nameStr := panels.Cursor(false), theme.ValSty.Render(it.name())
+	cursor, nameStr := layout.Cursor(false), theme.ValSty.Render(it.name())
 	if selected {
-		cursor, nameStr = panels.Cursor(true), theme.TitleSty.Render(it.name())
+		cursor, nameStr = layout.Cursor(true), theme.TitleSty.Render(it.name())
 	}
 
 	costSty := theme.CantSty

@@ -5,10 +5,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/codyconfer/viewkit/keys"
+	"github.com/codyconfer/viewkit/panels"
+	"github.com/codyconfer/viewkit/theme"
+
 	"github.com/codyconfer/goose/internal/characters"
 	"github.com/codyconfer/goose/internal/content"
-	"github.com/codyconfer/goose/internal/game/viewkit/panels"
-	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 	"github.com/codyconfer/goose/internal/notify"
 )
 
@@ -33,27 +35,37 @@ func (cs *characterScreen) tick(m *Model) {
 }
 
 func (cs *characterScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
-	if msg.String() == "ctrl+c" {
-		m.quitting = true
-		_ = m.save()
-		return tea.Quit
-	}
-
 	if cs.notification != nil {
-		switch msg.String() {
-		case "enter", " ", "spacebar", "esc", "q":
+		action, ok := characterNotifyKeymap().Action(msg.String())
+		if !ok {
+			return nil
+		}
+		switch action {
+		case keys.Quit:
+			m.quitting = true
+			_ = m.save()
+			return tea.Quit
+		case keys.Confirm:
 			m.notifs.Push(*cs.notification, outcomeBeats)
 			m.screen = cs.prev
 		}
 		return nil
 	}
 
-	switch msg.String() {
-	case "up", "k":
+	action, ok := characterKeymap().Action(msg.String())
+	if !ok {
+		return nil
+	}
+	switch action {
+	case keys.Quit:
+		m.quitting = true
+		_ = m.save()
+		return tea.Quit
+	case keys.Up:
 		cs.cursor = panels.MoveIndex(cs.cursor, -1, len(cs.char.Options))
-	case "down", "j":
+	case keys.Down:
 		cs.cursor = panels.MoveIndex(cs.cursor, 1, len(cs.char.Options))
-	case "enter", " ", "spacebar":
+	case keys.Confirm:
 		if len(cs.char.Options) == 0 {
 			return nil
 		}
@@ -78,8 +90,8 @@ func (cs *characterScreen) view(m *Model) string {
 	if cs.notification != nil {
 		b.WriteString(notificationCard(cs.notification.Title, cs.notification.Message, cs.notification.Tone, vk.Width))
 		b.WriteString("\n\n")
-		hints := [][2]string{hint("enter/space/esc/q", content.Text.Character.BackHint)}
-		b.WriteString(vk.HintLine(hints...))
+		km := characterNotifyKeymap()
+		b.WriteString(vk.HintLine(km.Hint(keys.Confirm)))
 		return b.String()
 	}
 
@@ -92,7 +104,7 @@ func (cs *characterScreen) view(m *Model) string {
 		}
 	}
 	b.WriteString("\n")
-	hints := [][2]string{verticalHint("weigh options"), confirmHint("decide")}
-	b.WriteString(vk.HintLine(hints...))
+	km := characterKeymap()
+	b.WriteString(vk.HintLine(km.Hint(keys.Up), km.Hint(keys.Confirm)))
 	return b.String()
 }

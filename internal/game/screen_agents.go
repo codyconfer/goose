@@ -5,42 +5,49 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/codyconfer/viewkit/keys"
+	"github.com/codyconfer/viewkit/layout"
+	"github.com/codyconfer/viewkit/panels"
+	"github.com/codyconfer/viewkit/theme"
+
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/game/viewkit/panels"
-	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 )
 
 type agentsScreen struct {
 	prev   screen
 	cursor int
-	scroll panels.ScrollState
+	scroll layout.ScrollState
 }
 
 func (as *agentsScreen) simulates() bool { return true }
 
 func (as *agentsScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 	agents := m.econ.Get().Agents
-	switch msg.String() {
-	case "ctrl+c":
+	action, ok := agentsKeymap().Action(msg.String())
+	if !ok {
+		return nil
+	}
+	switch action {
+	case keys.Quit:
 		m.quitting = true
 		_ = m.save()
 		return tea.Quit
-	case "esc", "a", "q":
+	case keys.Cancel:
 		m.screen = as.prev
-	case "up", "k":
+	case keys.Up:
 		as.cursor = panels.StepIndex(as.cursor, -1, len(agents))
-	case "down", "j":
+	case keys.Down:
 		as.cursor = panels.StepIndex(as.cursor, 1, len(agents))
-	case "enter", " ", "spacebar":
+	case keys.Confirm:
 		m.econ.ToggleAgent(as.cursor)
-	case "left", "h":
+	case keys.Left:
 		as.cycleSize(m, -1)
-	case "right", "l":
+	case keys.Right:
 		as.cycleSize(m, 1)
-	case "[", "-", "_":
+	case keys.Dec:
 		as.nudgeThreshold(m, -1)
-	case "]", "+", "=":
+	case keys.Inc:
 		as.nudgeThreshold(m, 1)
 	}
 	return nil
@@ -128,20 +135,21 @@ func (as *agentsScreen) view(m *Model) string {
 	vk := m.frame()
 	agents := m.econ.Get().Agents
 
+	km := agentsKeymap()
 	hints := [][2]string{
-		verticalHint("select"),
-		confirmHint("hire/bench"),
-		horizontalHint("size"),
-		hint("[ ]/-/+", "threshold"),
+		km.Hint(keys.Up),
+		km.Hint(keys.Confirm),
+		km.Hint(keys.Left),
+		km.Hint(keys.Inc),
+		km.Hint(keys.Cancel),
 	}
-	hints = append(hints, hint("esc/a/q", "back"))
 	sections := []string{
 		vk.Header(content.Text.Agents.DeskTitle, content.Text.Agents.Subtitle),
 		as.renderRoster(m, agents, len(agents) > 0),
 		panels.Flash(vk.Fit(m.flash)),
 		vk.HintLine(hints...),
 	}
-	return panels.Stack(sections...)
+	return layout.Stack(sections...)
 }
 
 func (as *agentsScreen) renderRoster(m *Model, agents []economy.Agent, focused bool) string {
@@ -162,7 +170,7 @@ func (as *agentsScreen) renderRoster(m *Model, agents []economy.Agent, focused b
 		if selected {
 			nameSty = theme.TitleSty
 		}
-		name := panels.Cursor(selected) + nameSty.Render(rc.Name)
+		name := layout.Cursor(selected) + nameSty.Render(rc.Name)
 
 		status := theme.DimSty.Render(content.Text.Agents.OffWord)
 		if a.Enabled {

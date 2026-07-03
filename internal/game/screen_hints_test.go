@@ -4,10 +4,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/codyconfer/viewkit/theme"
+
 	"github.com/codyconfer/goose/internal/characters"
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
-	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 	"github.com/codyconfer/goose/internal/notify"
 	"github.com/codyconfer/goose/internal/store"
 )

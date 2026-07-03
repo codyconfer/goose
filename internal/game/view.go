@@ -7,10 +7,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/codyconfer/viewkit/keys"
+	"github.com/codyconfer/viewkit/layout"
+	"github.com/codyconfer/viewkit/panels"
+	"github.com/codyconfer/viewkit/theme"
+
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/game/viewkit/panels"
-	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 	"github.com/codyconfer/goose/internal/notify"
 )
 
@@ -18,14 +21,14 @@ func (m Model) View() string {
 	if m.quitting {
 		return theme.AppFrame.Render(theme.TitleSty.Render(content.Text.App.Quit))
 	}
-	if !panels.FitsScreenWidth(m.width) {
-		return theme.AppFrame.Render(panels.TooNarrow(m.width))
+	if !layout.FitsScreenWidth(m.width) {
+		return theme.AppFrame.Render(layout.TooNarrow(m.width))
 	}
-	return theme.AppFrame.Render(panels.ViewportLayout(m.screen.view(&m), panels.ContentRows(m.height), m.pageScroll))
+	return theme.AppFrame.Render(layout.ViewportLayout(m.screen.view(&m), layout.ContentRows(m.height), m.pageScroll))
 }
 
-func (m Model) frame() panels.Frame {
-	return panels.ScreenFrame(m.width)
+func (m Model) frame() layout.Frame {
+	return layout.ScreenFrame(m.width)
 }
 
 func (m Model) renderTitleBar() string {
@@ -38,11 +41,11 @@ func (m Model) renderStatus() string {
 	lvl := s.Level()
 
 	tokens := vk.Spread(
-		theme.EggSty.Render("🪙 "+economy.FormatNum(s.Tokens))+theme.DimSty.Render(" tokens"),
+		theme.AccentSty.Render("🪙 "+economy.FormatNum(s.Tokens))+theme.DimSty.Render(" tokens"),
 		theme.DimSty.Render(fmt.Sprintf(content.Text.Status.RateFmt, economy.FormatNum(s.TokensPerSecond()), economy.FormatNum(s.PerClick))),
 	)
 	eggs := vk.Spread(
-		theme.EggSty.Render("🥚 "+economy.FormatNum(s.Eggs))+theme.DimSty.Render(" eggs"),
+		theme.AccentSty.Render("🥚 "+economy.FormatNum(s.Eggs))+theme.DimSty.Render(" eggs"),
 		theme.TitleSty.Render(fmt.Sprintf(content.Text.Status.LevelFmt, lvl)),
 	)
 
@@ -54,7 +57,7 @@ func (m Model) renderStatus() string {
 		progress = panels.Meter(frac, panels.MeterWidth(vk.Width, 22)) +
 			theme.DimSty.Render("  "+fmt.Sprintf(content.Text.Status.ProgressFmt, economy.FormatNum(le), economy.FormatNum(next), lvl+1))
 	} else {
-		progress = theme.EggSty.Render("★ ") + theme.DimSty.Render(content.Text.Status.MaxLevel)
+		progress = theme.AccentSty.Render("★ ") + theme.DimSty.Render(content.Text.Status.MaxLevel)
 	}
 
 	lines := []string{tokens, eggs, progress}
@@ -67,9 +70,9 @@ func (m Model) renderTapper() string {
 	caption := theme.DimSty.Render("press ") + theme.KeySty.Render("[enter]") + theme.DimSty.Render(" to generate a token")
 	if m.pulse > 0 {
 		goose = "🪿💥"
-		caption = theme.EggSty.Render(fmt.Sprintf("+%s 🪙", economy.FormatNum(m.econ.Get().PerClick)))
+		caption = theme.AccentSty.Render(fmt.Sprintf("+%s 🪙", economy.FormatNum(m.econ.Get().PerClick)))
 	}
-	card := theme.TapCardSty.Width(vk.Width + 2).Render(lipgloss.JoinVertical(lipgloss.Center,
+	card := theme.CardSty.Width(vk.Width + 2).Render(lipgloss.JoinVertical(lipgloss.Center,
 		lipgloss.NewStyle().Bold(true).Render(goose),
 		caption,
 	))
@@ -113,8 +116,7 @@ func (m Model) renderFeed(offset int, focused bool) string {
 		vk = vk.Focus()
 	}
 	raw := m.feed.lines()
-	// Newest first, mirroring the ledgers, so offset 0 shows the latest activity
-	// and scrolling down walks back through history.
+
 	lines := make([]string, len(raw))
 	for i, ln := range raw {
 		lines[len(raw)-1-i] = theme.DimSty.Italic(true).Render(vk.Fit(ln))
@@ -122,9 +124,6 @@ func (m Model) renderFeed(offset int, focused bool) string {
 	return vk.ScrollPanel(content.Text.Feed.Panel, lines, m.panelRows(feedRows), offset)
 }
 
-// feedScrollable reports whether the feed holds more lines than its current
-// tier window can show, so the footer only advertises the scroll keys when they
-// would actually do something.
 func (m Model) feedScrollable() bool {
 	return m.feed.size() > m.panelRows(feedRows)
 }
@@ -140,7 +139,7 @@ func (m Model) renderMarket() string {
 		priceTag = theme.CantSty.Render(content.Text.Market.PriceGlut)
 	}
 	return vk.Panel(content.Text.Market.Panel,
-		vk.Row(content.Text.Market.StockLabel, theme.EggSty.Render(economy.FormatNum(s.Eggs)+" eggs")),
+		vk.Row(content.Text.Market.StockLabel, theme.AccentSty.Render(economy.FormatNum(s.Eggs)+" eggs")),
 		vk.Row(content.Text.Market.MarketCapLabel, theme.ValSty.Render(economy.FormatNum(s.MarketCap())+" eggs")),
 		vk.Row(content.Text.Market.LayingLabel, theme.CanSty.Render("+"+economy.FormatNum(s.EggsPerSecond())+" /sec")),
 		vk.Row(content.Text.Market.SellingLabel, theme.CanSty.Render("+"+economy.FormatNum(m.sellRate)+" /sec")),
@@ -149,23 +148,25 @@ func (m Model) renderMarket() string {
 	)
 }
 
-func (m Model) renderFooter(focusVerb string, ringSize int) string {
-	hints := []([2]string){confirmHint("generate")}
-	hints = append(hints, focusHints(focusVerb, ringSize)...)
+func (m Model) renderFooter(km *keys.Map, focusVerb string, ringSize int) string {
+	hints := [][2]string{
+		km.Hint(keys.Confirm),
+		km.HintLabeled(keys.Up, focusVerb),
+	}
+	if ringSize > 1 {
+		hints = append(hints, km.Hint(keys.FocusNext))
+	}
 	hints = append(hints,
-		hint("b/→/l", "buy"),
-		hint("s", "sell"),
-		hint("B/S", "max queue"),
-		hint("t", "trade"),
-		hint("a", "agents"),
+		km.Hint(actBuy),
+		km.Hint(actSell),
+		km.Hint(actMaxBuy),
+		km.Hint(actOpenTrade),
+		km.Hint(actOpenAgents),
 	)
 	if m.econ.Get().Level() >= economy.SpecUnlockLevel {
-		hints = append(hints,
-			hint("O/C", "max call"),
-			hint("P", "max put"),
-		)
+		hints = append(hints, km.Hint(actMaxCall), km.Hint(actMaxPut))
 	}
-	hints = append(hints, hint("esc/q", "quit"))
+	hints = append(hints, km.Hint(keys.Quit))
 	return m.frame().HintLine(hints...)
 }
 
@@ -194,31 +195,31 @@ func notificationCard(title, message string, tone notify.Tone, width int) string
 	return sty.Render(body)
 }
 
-func (m Model) heightTier() panels.Tier { return panels.TierForHeight(m.height) }
+func (m Model) heightTier() layout.Tier { return layout.TierForHeight(m.height) }
 
-func (m Model) panelRows(r panels.TierRows) int {
-	return r.At(panels.TierForHeight(m.height))
+func (m Model) panelRows(r layout.TierRows) int {
+	return r.At(layout.TierForHeight(m.height))
 }
 
 func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
 	body := m.screen.view(m)
-	rows := panels.ScrollableRows(body, panels.ContentRows(m.height))
-	if rows <= 0 || !panels.FitsScreenWidth(m.width) {
+	rows := layout.ScrollableRows(body, layout.ContentRows(m.height))
+	if rows <= 0 || !layout.FitsScreenWidth(m.width) {
 		return false
 	}
 
-	total := panels.CountLines(panels.ScrollableBody(body, rows))
+	total := layout.CountLines(layout.ScrollableBody(body, rows))
 	if total <= rows {
 		m.pageScroll = 0
 		return false
 	}
 
-	page := rows - 1
+	page := layout.ViewportContentRows(rows)
 	if page < 1 {
 		page = 1
 	}
 
-	s := panels.ScrollState{Offset: m.pageScroll}
+	s := layout.ScrollState{Offset: m.pageScroll}
 	switch msg.String() {
 	case "pgdown":
 		s.Scroll(page, total, page)
@@ -233,24 +234,24 @@ func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
 
 func (m *Model) clampPageScroll() {
 	body := m.screen.view(m)
-	rows := panels.ScrollableRows(body, panels.ContentRows(m.height))
-	if rows <= 0 || !panels.FitsScreenWidth(m.width) {
+	rows := layout.ScrollableRows(body, layout.ContentRows(m.height))
+	if rows <= 0 || !layout.FitsScreenWidth(m.width) {
 		m.pageScroll = 0
 		return
 	}
 
-	total := panels.CountLines(panels.ScrollableBody(body, rows))
+	total := layout.CountLines(layout.ScrollableBody(body, rows))
 	if total <= rows {
 		m.pageScroll = 0
 		return
 	}
 
-	page := rows - 1
+	page := layout.ViewportContentRows(rows)
 	if page < 1 {
 		page = 1
 	}
 
-	s := panels.ScrollState{Offset: m.pageScroll}
+	s := layout.ScrollState{Offset: m.pageScroll}
 	s.Scroll(0, total, page)
 	m.pageScroll = s.Offset
 }

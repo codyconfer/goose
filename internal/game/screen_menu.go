@@ -7,11 +7,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/codyconfer/viewkit/keys"
+	"github.com/codyconfer/viewkit/panels"
+	"github.com/codyconfer/viewkit/theme"
+
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
-	"github.com/codyconfer/goose/internal/game/viewkit/panels"
-	"github.com/codyconfer/goose/internal/game/viewkit/theme"
 	"github.com/codyconfer/goose/internal/store"
 	"github.com/codyconfer/goose/internal/world"
 )
@@ -55,30 +57,34 @@ func (ms *menuScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		return ms.handleDelete(m, msg)
 	}
 
-	switch msg.String() {
-	case "ctrl+c", "q", "esc":
+	action, ok := menuKeymap().Action(msg.String())
+	if !ok {
+		return nil
+	}
+	switch action {
+	case keys.Quit:
 		m.quitting = true
 		return tea.Quit
-	case "n":
+	case actMenuNew:
 		return ms.startNew(m)
-	case "r":
+	case actMenuRename:
 		if save, ok := ms.selectedSave(); ok {
 			ms.mode = menuModeRename
 			ms.target = save
 			ms.edit = save.Name
 			m.flash = ""
 		}
-	case "x", "d":
+	case actMenuDelete:
 		if save, ok := ms.selectedSave(); ok {
 			ms.mode = menuModeDelete
 			ms.target = save
 			m.flash = ""
 		}
-	case "up", "k":
+	case keys.Up:
 		ms.cursor = panels.MoveIndex(ms.cursor, -1, len(ms.items))
-	case "down", "j":
+	case keys.Down:
 		ms.cursor = panels.MoveIndex(ms.cursor, 1, len(ms.items))
-	case "enter", " ", "spacebar":
+	case keys.Confirm:
 		return ms.choose(m)
 	}
 	return nil
@@ -136,8 +142,17 @@ func (m *Model) foundFlock(set economy.Settings, seed int64) {
 }
 
 func (ms *menuScreen) handleRename(m *Model, msg tea.KeyMsg) tea.Cmd {
-	switch msg.String() {
-	case "enter":
+	action, ok := menuRenameKeymap().Action(msg.String())
+	if !ok {
+		for _, r := range msg.Runes {
+			if unicode.IsPrint(r) {
+				ms.edit += string(r)
+			}
+		}
+		return nil
+	}
+	switch action {
+	case actMenuSave:
 		name := store.CleanName(ms.edit)
 		if name == "" {
 			m.setFlash("Save name can't be empty.")
@@ -155,27 +170,25 @@ func (ms *menuScreen) handleRename(m *Model, msg tea.KeyMsg) tea.Cmd {
 		ms.edit = ""
 		m.refreshSaves(ms)
 		ms.selectSave(id)
-	case "esc", "ctrl+c":
+	case keys.Cancel:
 		ms.mode = menuModeNormal
 		ms.edit = ""
-	case "backspace", "ctrl+h":
+	case keys.Erase:
 		rs := []rune(ms.edit)
 		if len(rs) > 0 {
 			ms.edit = string(rs[:len(rs)-1])
-		}
-	default:
-		for _, r := range msg.Runes {
-			if unicode.IsPrint(r) {
-				ms.edit += string(r)
-			}
 		}
 	}
 	return nil
 }
 
 func (ms *menuScreen) handleDelete(m *Model, msg tea.KeyMsg) tea.Cmd {
-	switch msg.String() {
-	case "y", "Y":
+	action, ok := menuDeleteKeymap().Action(msg.String())
+	if !ok {
+		return nil
+	}
+	switch action {
+	case actConfirmYes:
 		id := ms.target.ID
 		if err := store.DeleteSave(id); err != nil {
 			m.setFlash("Couldn't delete the save.")
@@ -187,7 +200,7 @@ func (ms *menuScreen) handleDelete(m *Model, msg tea.KeyMsg) tea.Cmd {
 		}
 		ms.mode = menuModeNormal
 		m.refreshSaves(ms)
-	case "n", "N", "esc", "q", "ctrl+c":
+	case keys.Cancel:
 		ms.mode = menuModeNormal
 	}
 	return nil
@@ -204,7 +217,7 @@ func (ms *menuScreen) view(m *Model) string {
 	case menuModeRename:
 		b.WriteString(vk.Panel("SAVE NAME",
 			theme.DimSty.Render("Rename "+ms.target.Name),
-			theme.EggSty.Render(vk.Fit(ms.edit)),
+			theme.AccentSty.Render(vk.Fit(ms.edit)),
 		))
 		b.WriteString("\n\n")
 	case menuModeDelete:
@@ -225,29 +238,26 @@ func (ms *menuScreen) view(m *Model) string {
 	b.WriteString("\n")
 	switch ms.mode {
 	case menuModeRename:
-		hints := [][2]string{
-			hint("type", "rename"),
-			hint("backspace", "erase"),
-			hint("enter", "save"),
-			hint("esc", "cancel"),
-		}
-		b.WriteString(vk.HintLine(hints...))
+		km := menuRenameKeymap()
+		b.WriteString(vk.HintLine(
+			[2]string{"type", "rename"},
+			km.Hint(keys.Erase),
+			km.Hint(actMenuSave),
+			km.Hint(keys.Cancel),
+		))
 	case menuModeDelete:
-		hints := [][2]string{
-			hint("y", "delete"),
-			hint("n/esc/q", "cancel"),
-		}
-		b.WriteString(vk.HintLine(hints...))
+		km := menuDeleteKeymap()
+		b.WriteString(vk.HintLine(km.Hint(actConfirmYes), km.Hint(keys.Cancel)))
 	default:
-		hints := [][2]string{
-			verticalHint("select"),
-			confirmHint("choose"),
-			hint("n", "new"),
-			hint("r", "rename"),
-			hint("x/d", "delete"),
-		}
-		hints = append(hints, hint("esc/q", "quit"))
-		b.WriteString(vk.HintLine(hints...))
+		km := menuKeymap()
+		b.WriteString(vk.HintLine(
+			km.Hint(keys.Up),
+			km.Hint(keys.Confirm),
+			km.Hint(actMenuNew),
+			km.Hint(actMenuRename),
+			km.Hint(actMenuDelete),
+			km.Hint(keys.Quit),
+		))
 	}
 	return b.String()
 }
