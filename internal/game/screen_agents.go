@@ -131,15 +131,8 @@ func nearestIndex(opts []float64, v float64) int {
 	return best
 }
 
-func (as *agentsScreen) panes(m *Model) []layout.Pane {
-	agents := m.econ.Get().Agents
-	return []layout.Pane{
-		{
-			Name:        "roster",
-			Interactive: len(agents) > 0,
-			Render:      func(f layout.Frame) string { return as.renderRoster(m, cellFrame(f), agents) },
-		},
-	}
+func (as *agentsScreen) build(m *Model) layout.Screen {
+	return buildScreen(screenAgents, agentsPaneCtx{m: m, as: as}, agentsPanesReg)
 }
 
 func (as *agentsScreen) view(m *Model) string {
@@ -152,7 +145,7 @@ func (as *agentsScreen) view(m *Model) string {
 		km.Hint(keys.Inc),
 		km.Hint(keys.Cancel),
 	}
-	body := layout.Screen{Layout: layout.FlexGrid{}, Panes: as.panes(m)}.Render(m.bodyFrame(), m.heightTier(), 0)
+	body := as.build(m).Render(m.bodyFrame(), m.heightTier(), 0)
 	return layout.Stack(
 		vk.Header(content.Text.Agents.DeskTitle, content.Text.Agents.Subtitle),
 		body,

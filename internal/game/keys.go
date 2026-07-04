@@ -15,6 +15,7 @@ const (
 	actMaxPut     keys.Action = "game.max_put"
 	actOpenTrade  keys.Action = "game.open_trade"
 	actOpenAgents keys.Action = "game.open_agents"
+	actOpenLayout keys.Action = "game.open_layout"
 
 	actToggleKind  keys.Action = "desk.toggle_kind"
 	actCancelOrder keys.Action = "desk.cancel"
@@ -27,9 +28,12 @@ const (
 	actMenuRename keys.Action = "menu.rename"
 	actMenuDelete keys.Action = "menu.delete"
 	actMenuSave   keys.Action = "menu.save"
+	actMenuLayout keys.Action = "menu.layout"
 	actConfirmYes keys.Action = "menu.confirm_delete"
 
 	actReroll keys.Action = "settings.reroll"
+
+	actLayoutSave keys.Action = "layout.save"
 )
 
 func toggleBinding(action keys.Action, label string) keys.Binding {
@@ -56,6 +60,7 @@ func gameKeymap() *keys.Map {
 		keys.Binding{Keys: []string{"P"}, Action: actMaxPut, Glyph: "P", Label: "max put"},
 		keys.Binding{Keys: []string{"t"}, Action: actOpenTrade, Glyph: "t", Label: "trade"},
 		keys.Binding{Keys: []string{"a"}, Action: actOpenAgents, Glyph: "a", Label: "agents"},
+		keys.Binding{Keys: []string{"L"}, Action: actOpenLayout, Glyph: "L", Label: "layout"},
 	)
 }
 
@@ -138,9 +143,26 @@ func menuKeymap() *keys.Map {
 		keys.Binding{Keys: []string{"n"}, Action: actMenuNew, Glyph: "n", Label: "new"},
 		keys.Binding{Keys: []string{"r"}, Action: actMenuRename, Glyph: "r", Label: "rename"},
 		keys.Binding{Keys: []string{"x", "d"}, Action: actMenuDelete, Glyph: "x/d", Label: "delete"},
+		keys.Binding{Keys: []string{"l"}, Action: actMenuLayout, Glyph: "l", Label: "layout"},
 		sc.Binding(keys.Up).WithLabel("select"),
 		sc.Binding(keys.Down),
 		sc.Binding(keys.Confirm).WithLabel("choose"),
+	)
+}
+
+func layoutEditorKeymap() *keys.Map {
+	sc := keys.Cur()
+	return keys.NewMap(
+		keys.Binding{Keys: []string{"ctrl+c"}, Action: keys.Quit},
+		keys.Binding{Keys: []string{"esc", "q"}, Action: keys.Cancel, Glyph: "esc/q", Label: "back"},
+		sc.Binding(keys.Up).WithLabel("row"),
+		sc.Binding(keys.Down),
+		sc.Binding(keys.Left).WithLabel("change"),
+		sc.Binding(keys.Right),
+		sc.Binding(keys.Confirm).WithLabel("toggle panel"),
+		sc.Binding(keys.Inc).WithLabel("reorder"),
+		sc.Binding(keys.Dec),
+		keys.Binding{Keys: []string{"w"}, Action: actLayoutSave, Glyph: "w", Label: "save"},
 	)
 }
 

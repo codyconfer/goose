@@ -80,6 +80,9 @@ func (ms *menuScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 			ms.target = save
 			m.flash = ""
 		}
+	case actMenuLayout:
+		m.flash = ""
+		m.screen = newLayoutEditor(ms)
 	case keys.Up:
 		ms.cursor = panels.MoveIndex(ms.cursor, -1, len(ms.items))
 	case keys.Down:
@@ -256,6 +259,7 @@ func (ms *menuScreen) view(m *Model) string {
 			km.Hint(actMenuNew),
 			km.Hint(actMenuRename),
 			km.Hint(actMenuDelete),
+			km.Hint(actMenuLayout),
 			km.Hint(keys.Quit),
 		))
 	}

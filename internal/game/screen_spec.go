@@ -32,8 +32,12 @@ type specScreen struct {
 
 func (ss *specScreen) simulates() bool { return true }
 
+func (ss *specScreen) build(m *Model) layout.Screen {
+	return buildScreen(screenSpec, specPaneCtx{m: m, ss: ss}, specPanesReg)
+}
+
 func (ss *specScreen) focusables(m *Model) layout.Ring {
-	return layout.PaneRing(ss.panes(m))
+	return ss.build(m).Ring()
 }
 
 func cellFrame(f layout.Frame) layout.Frame {
@@ -42,30 +46,6 @@ func cellFrame(f layout.Frame) layout.Frame {
 		inner = inner.Focus()
 	}
 	return inner
-}
-
-func (ss *specScreen) panes(m *Model) []layout.Pane {
-	s := m.econ.Get()
-	panes := []layout.Pane{
-		{Name: "purse", Render: func(f layout.Frame) string { return ss.renderPurse(m, cellFrame(f)) }},
-		{Name: "book", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderBook(m, cellFrame(f)) }},
-		{Name: "builder", Interactive: true, Render: func(f layout.Frame) string { return ss.renderTicket(m, cellFrame(f)) }},
-		{Name: "positions", Interactive: len(s.Positions) > 0, Render: func(f layout.Frame) string { return ss.renderPositions(m, cellFrame(f)) }},
-	}
-	if len(s.Positions) > 0 {
-		panes = append(panes, layout.Pane{
-			Name:    "pnl",
-			MinTier: layout.TierTall,
-			Render:  func(f layout.Frame) string { return ss.renderPnL(m, cellFrame(f)) },
-		})
-	}
-	panes = append(panes, layout.Pane{
-		Name:        "ledger",
-		MinTier:     layout.TierMedium,
-		Interactive: len(s.Ledger) > m.panelRows(ledgerRows),
-		Render:      func(f layout.Frame) string { return renderLedger(m, cellFrame(f), ss.ledger) },
-	})
-	return panes
 }
 
 func (ss *specScreen) focusedPanel(m *Model) string {
@@ -211,7 +191,7 @@ func (ss *specScreen) view(m *Model) string {
 	)
 	hints = append(hints, km.Hint(keys.Cancel))
 
-	body := layout.Screen{Layout: layout.FlexGrid{}, Panes: ss.panes(m)}.Render(m.bodyFrame(), m.heightTier(), ss.focus)
+	body := ss.build(m).Render(m.bodyFrame(), m.heightTier(), ss.focus)
 	return layout.Stack(
 		vk.Header(content.Text.Spec.DeskTitle),
 		body,
