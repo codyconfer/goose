@@ -36,8 +36,12 @@ type tradeScreen struct {
 
 func (ts *tradeScreen) simulates() bool { return true }
 
+func (ts *tradeScreen) build(m *Model) layout.Screen {
+	return buildScreen(screenTrade, tradePaneCtx{m: m, ts: ts}, tradePanesReg)
+}
+
 func (ts *tradeScreen) focusables(m *Model) layout.Ring {
-	return layout.PaneRing(ts.panes(m))
+	return ts.build(m).Ring()
 }
 
 func (ts *tradeScreen) renderPurse(m *Model, vk layout.Frame) string {
@@ -50,23 +54,6 @@ func (ts *tradeScreen) renderPurse(m *Model, vk layout.Frame) string {
 		vk.Row(content.Text.Trade.TrendLabel, tradeTrendLabel(s)),
 		vk.Row(content.Text.Trade.TrendStrengthLabel, tradeTrendStrength(s)),
 	)
-}
-
-func (ts *tradeScreen) panes(m *Model) []layout.Pane {
-	s := m.econ.Get()
-	return []layout.Pane{
-		{Name: "purse", Render: func(f layout.Frame) string { return ts.renderPurse(m, cellFrame(f)) }},
-		{Name: "chart", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderPriceChart(m, cellFrame(f)) }},
-		{Name: "flow", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderFlow(m, cellFrame(f)) }},
-		{Name: "builder", Interactive: true, Render: func(f layout.Frame) string { return ts.renderBuilder(m, cellFrame(f)) }},
-		{Name: "queue", Interactive: len(s.Transactions) > 0, Render: func(f layout.Frame) string { return renderTransactions(m, cellFrame(f), ts.queue) }},
-		{
-			Name:        "ledger",
-			MinTier:     layout.TierMedium,
-			Interactive: len(s.Ledger) > m.panelRows(ledgerRows),
-			Render:      func(f layout.Frame) string { return renderLedger(m, cellFrame(f), ts.ledger) },
-		},
-	}
 }
 
 func (ts *tradeScreen) focusedPanel(m *Model) string {
@@ -196,7 +183,7 @@ func (ts *tradeScreen) view(m *Model) string {
 	}
 	hints = append(hints, km.Hint(keys.Cancel))
 
-	body := layout.Screen{Layout: layout.FlexGrid{}, Panes: ts.panes(m)}.Render(m.bodyFrame(), m.heightTier(), ts.focus)
+	body := ts.build(m).Render(m.bodyFrame(), m.heightTier(), ts.focus)
 	return layout.Stack(
 		vk.Header(content.Text.Trade.DeskTitle),
 		body,

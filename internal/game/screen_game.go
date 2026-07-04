@@ -23,58 +23,16 @@ type gameScreen struct {
 
 func (gs *gameScreen) simulates() bool { return true }
 
+func (gs *gameScreen) build(m *Model) layout.Screen {
+	return buildScreen(screenGame, gamePaneCtx{m: m, gs: gs}, gamePanesReg)
+}
+
 func (gs *gameScreen) focusables(m *Model) layout.Ring {
-	return layout.PaneRing(gs.contentPanes(m))
+	return gs.build(m).Ring()
 }
 
 func static(render func() string) func(layout.Frame) string {
 	return func(layout.Frame) string { return render() }
-}
-
-func (gs *gameScreen) contentPanes(m *Model) []layout.Pane {
-	s := m.econ.Get()
-	panes := []layout.Pane{
-		{Render: static(m.renderTitleBar)},
-		{Render: static(m.renderStatus)},
-	}
-	if s.Frozen() {
-		panes = append(panes, layout.Pane{Render: static(m.renderShutdown)})
-	}
-	panes = append(panes, layout.Pane{
-		Name:        "capex",
-		Title:       "Capital Expenditure",
-		Interactive: true,
-		Render:      func(f layout.Frame) string { return gs.renderCapex(m, f.Focused) },
-	})
-	if s.EggsPerSecond() > 0 || s.Eggs > 0 {
-		panes = append(panes, layout.Pane{
-			Name:    "market",
-			Title:   "Market",
-			MinTier: layout.TierTall,
-			Render:  static(m.renderMarket),
-		})
-	}
-	if len(s.Transactions) > 0 || s.Demand() > 0 {
-		panes = append(panes, layout.Pane{
-			Name:    "orders",
-			Title:   "Orders",
-			MinTier: layout.TierTall,
-			Render:  func(layout.Frame) string { return renderTransactions(m, m.frame(), layout.ScrollState{}) },
-		})
-	}
-	panes = append(panes, layout.Pane{
-		Name:        "feed",
-		Title:       "Feed",
-		Interactive: m.feedScrollable(),
-		Render:      func(f layout.Frame) string { return m.renderFeed(gs.feedScroll.Offset, f.Focused) },
-	})
-	panes = append(panes, layout.Pane{
-		Name:    "activity",
-		Title:   "Activity",
-		MinTier: layout.TierMedium,
-		Render:  static(m.renderActivity),
-	})
-	return panes
 }
 
 func (gs *gameScreen) focusedPanel(m *Model) string {
@@ -144,6 +102,8 @@ func (gs *gameScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		m.screen = &tradeScreen{prev: gs, kind: economy.TxBuyEggs}
 	case actOpenAgents:
 		m.screen = &agentsScreen{prev: gs}
+	case actOpenLayout:
+		m.screen = newLayoutEditor(gs)
 	}
 	return nil
 }
@@ -195,17 +155,16 @@ func (gs *gameScreen) openMaxPosition(m *Model, kind economy.PosKind) {
 }
 
 func (gs *gameScreen) view(m *Model) string {
-	panes := gs.contentPanes(m)
-	panes = append(panes, layout.Pane{
-		Render: func(layout.Frame) string {
-			return lipgloss.JoinVertical(lipgloss.Left,
-				m.renderTapper(),
-				m.renderFooter(gs.keys(), gs.focusVerb(m), len(gs.focusables(m))),
-			)
-		},
-	})
-	scr := layout.Screen{Layout: layout.SingleColumn{}, Panes: panes}
-	return scr.Render(m.frame(), m.heightTier(), gs.focus)
+	sections := []string{m.renderTitleBar(), m.renderStatus()}
+	if m.econ.Get().Frozen() {
+		sections = append(sections, m.renderShutdown())
+	}
+	sections = append(sections, gs.build(m).Render(m.frame(), m.heightTier(), gs.focus))
+	sections = append(sections, lipgloss.JoinVertical(lipgloss.Left,
+		m.renderTapper(),
+		m.renderFooter(gs.keys(), gs.focusVerb(m), len(gs.focusables(m))),
+	))
+	return layout.Stack(sections...)
 }
 
 func (gs *gameScreen) renderCapex(m *Model, focused bool) string {

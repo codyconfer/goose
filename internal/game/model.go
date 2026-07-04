@@ -50,6 +50,7 @@ type Model struct {
 }
 
 func New(s *economy.Machine, ev *events.Machine, offline float64) Model {
+	loadLayoutConfig()
 	m := Model{
 		econ:   s,
 		events: ev,

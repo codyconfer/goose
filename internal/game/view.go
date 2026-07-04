@@ -166,6 +166,7 @@ func (m Model) renderFooter(km *keys.Map, focusVerb string, ringSize int) string
 		km.Hint(actMaxBuy),
 		km.Hint(actOpenTrade),
 		km.Hint(actOpenAgents),
+		km.Hint(actOpenLayout),
 	)
 	if m.econ.Get().Level() >= economy.SpecUnlockLevel {
 		hints = append(hints, km.Hint(actMaxCall), km.Hint(actMaxPut))
