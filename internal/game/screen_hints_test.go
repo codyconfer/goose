@@ -58,29 +58,33 @@ func TestTradeDeskLegendShowsAliases(t *testing.T) {
 	)
 }
 
-func TestSpecDeskLegendShowsAliases(t *testing.T) {
+func TestDeskDerivativesLegendShowsAliases(t *testing.T) {
 	m := New(economy.FromState(leveledState()), events.NewMachine(), 0)
-	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
+	ts := &tradeScreen{prev: &gameScreen{}, pos: economy.PosCall}
+	m.screen = ts
+	focusDeskPane(t, &m, ts, "ticket")
 
 	assertHintText(t, renderForHints(m),
 		"←/→/h/l",
 		"↑/↓/j/k",
 		"[ ]/-/+",
 		"enter/space",
-		"esc/d/q",
+		"esc/t/q",
 	)
 }
 
-func TestAgentsLegendShowsAliases(t *testing.T) {
+func TestDeskRosterLegendShowsAliases(t *testing.T) {
 	m := New(economy.NewMachine(), events.NewMachine(), 0)
-	m.screen = &agentsScreen{prev: &gameScreen{}}
+	ts := &tradeScreen{prev: &gameScreen{}}
+	m.screen = ts
+	focusDeskPane(t, &m, ts, "roster")
 
 	assertHintText(t, renderForHints(m),
 		"↑/↓/j/k",
 		"enter/space",
 		"←/→/h/l",
 		"[ ]/-/+",
-		"esc/a/q",
+		"esc/t/q",
 	)
 }
 
@@ -159,7 +163,7 @@ func TestSettingsLegendTracksSeedEditingKeys(t *testing.T) {
 		"esc/q",
 	)
 
-	ss.cursor = len(ss.rows)
+	ss.cursor = ss.seedPos()
 	assertHintText(t, renderForHints(m),
 		"digits/-",
 		"backspace",

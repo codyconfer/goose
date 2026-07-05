@@ -23,13 +23,16 @@ type settingRow struct {
 }
 
 type settingsScreen struct {
-	rows   []settingRow
-	cursor int
-	seed   *forms.Form
+	rows      []settingRow
+	cursor    int
+	seed      *forms.Form
+	themeKeys []string
+	themeIdx  int
 }
 
 func newSettingsScreen() *settingsScreen {
 	def := economy.DefaultSettings()
+	tk := theme.Keys()
 	return &settingsScreen{
 		rows: []settingRow{
 			{spec: content.Settings.LevelPace, idx: def.LevelIdx()},
@@ -41,7 +44,31 @@ func newSettingsScreen() *settingsScreen {
 			Kind: forms.FieldText,
 			Text: fmt.Sprintf("%d", time.Now().UnixNano()),
 		}),
+		themeKeys: tk,
+		themeIdx:  currentThemeIndex(tk),
 	}
+}
+
+func currentThemeIndex(keys []string) int {
+	for i, k := range keys {
+		if k == uiTheme.Theme {
+			return i
+		}
+	}
+	return 0
+}
+
+func (ss *settingsScreen) themePos() int { return len(ss.rows) }
+func (ss *settingsScreen) seedPos() int  { return len(ss.rows) + 1 }
+func (ss *settingsScreen) rowTotal() int { return len(ss.rows) + 2 }
+
+func (ss *settingsScreen) stepTheme(delta int) {
+	if len(ss.themeKeys) == 0 {
+		return
+	}
+	ss.themeIdx = panels.StepIndex(ss.themeIdx, delta, len(ss.themeKeys))
+	setTheme(ss.themeKeys[ss.themeIdx])
+	_ = saveThemeConfig()
 }
 
 func (ss *settingsScreen) seedForm() *forms.Form {
@@ -82,11 +109,11 @@ func (ss *settingsScreen) seedValue() int64 {
 }
 
 func (ss *settingsScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
-	total := len(ss.rows) + 1
+	total := ss.rowTotal()
 	ss.cursor = panels.ClampIndex(ss.cursor, total)
 	action, ok := settingsKeymap().Action(msg.String())
 	if !ok {
-		if ss.cursor == len(ss.rows) {
+		if ss.cursor == ss.seedPos() {
 			ss.seedForm().Insert(string(msg.Runes))
 		}
 		return nil
@@ -105,18 +132,22 @@ func (ss *settingsScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		if ss.cursor < len(ss.rows) {
 			r := &ss.rows[ss.cursor]
 			r.idx = panels.StepIndex(r.idx, -1, len(r.spec.Options))
+		} else if ss.cursor == ss.themePos() {
+			ss.stepTheme(-1)
 		}
 	case keys.Right:
 		if ss.cursor < len(ss.rows) {
 			r := &ss.rows[ss.cursor]
 			r.idx = panels.StepIndex(r.idx, 1, len(r.spec.Options))
+		} else if ss.cursor == ss.themePos() {
+			ss.stepTheme(1)
 		}
 	case actReroll:
-		if ss.cursor == len(ss.rows) {
+		if ss.cursor == ss.seedPos() {
 			ss.seedForm().Focused().Text = fmt.Sprintf("%d", time.Now().UnixNano())
 		}
 	case keys.Erase:
-		if ss.cursor == len(ss.rows) {
+		if ss.cursor == ss.seedPos() {
 			ss.seedForm().Handle(keys.Erase)
 		}
 	case keys.Confirm:
@@ -127,7 +158,7 @@ func (ss *settingsScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 
 func (ss *settingsScreen) view(m *Model) string {
 	vk := m.frame()
-	cursor := panels.ClampIndex(ss.cursor, len(ss.rows)+1)
+	cursor := panels.ClampIndex(ss.cursor, ss.rowTotal())
 	var b strings.Builder
 	b.WriteString(vk.Header("NEW FLOCK", "tune the simulation before you hatch"))
 	b.WriteString("\n\n")
@@ -163,7 +194,33 @@ func (ss *settingsScreen) view(m *Model) string {
 		b.WriteString("\n")
 	}
 
-	seedSelected := cursor == len(ss.rows)
+	themeSelected := cursor == ss.themePos()
+	var themeLabel string
+	if len(ss.themeKeys) > 0 {
+		tidx := panels.ClampIndex(ss.themeIdx, len(ss.themeKeys))
+		themeLabel = theme.DisplayName(ss.themeKeys[tidx])
+	}
+	themeValSty := theme.ValSty
+	if themeSelected {
+		themeValSty = theme.AccentSty
+	}
+	tleft, tright := "  ", "  "
+	if themeSelected {
+		if ss.themeIdx > 0 {
+			tleft = theme.KeySty.Render("◂ ")
+		}
+		if ss.themeIdx < len(ss.themeKeys)-1 {
+			tright = theme.KeySty.Render(" ▸")
+		}
+	}
+	b.WriteString(vk.Spread(vk.Selectable("Theme", themeSelected), tleft+themeValSty.Render(themeLabel)+tright))
+	b.WriteString("\n")
+	if themeSelected {
+		b.WriteString(theme.DimSty.Width(vk.Width-5).MarginLeft(5).Render("Color theme for the whole interface. Applies immediately.") + "\n")
+	}
+	b.WriteString("\n")
+
+	seedSelected := cursor == ss.seedPos()
 	seedTxt := ss.seedText()
 	seedValue := theme.ValSty.Render(seedTxt)
 	if seedSelected {

@@ -78,7 +78,7 @@ func (g FlexColumns) Arrange(f Frame, tier Tier, panes []Pane, focusedName strin
 			}
 			sections = append(sections, Section{Content: p.Render(pf), MinTier: p.MinTier})
 		}
-		colStr[c] = StackFit(tier, sections...)
+		colStr[c] = StackTightFit(tier, sections...)
 		if n := CountLines(colStr[c]); n > maxH {
 			maxH = n
 		}

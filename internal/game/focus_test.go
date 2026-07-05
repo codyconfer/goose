@@ -40,6 +40,12 @@ func TestTradeFocusRingScrollsFocusedPanel(t *testing.T) {
 
 	m = send(m, key("tab"))
 	ts = m.screen.(*tradeScreen)
+	if ts.focusedPanel(&m) != "roster" {
+		t.Fatalf("after third tab focus = %q, want roster", ts.focusedPanel(&m))
+	}
+
+	m = send(m, key("tab"))
+	ts = m.screen.(*tradeScreen)
 	if ts.focusedPanel(&m) != "builder" {
 		t.Fatalf("tab should wrap back to builder, got %q", ts.focusedPanel(&m))
 	}

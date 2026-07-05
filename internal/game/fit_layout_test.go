@@ -102,12 +102,14 @@ func TestSpecDeskFitsMinHeight(t *testing.T) {
 	econ := economy.FromState(leveledState())
 	econ.OpenPosition(economy.PosCall, 50, 5, 60)
 	m := New(econ, events.NewMachine(), 0)
-	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
+	m.screen = &tradeScreen{prev: &gameScreen{}, pos: economy.PosCall}
 
 	v := atMinHeight(m)
-	assertFitsMinHeight(t, "spec desk", v)
+	assertFitsMinHeight(t, "trade desk", v)
 
-	assertContains(t, "spec desk", v, "WRITE A CONTRACT", "OPEN POSITIONS")
+	// The unified desk stacks many panes; at the minimum height panes below the
+	// fold page with pgup/pgdn. The derivatives ticket stays on the first page.
+	assertContains(t, "trade desk", v, "WRITE A CONTRACT")
 }
 
 func TestGameScreenShortTierDropsMediumPanels(t *testing.T) {

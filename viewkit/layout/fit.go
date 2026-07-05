@@ -25,6 +25,16 @@ func StackFit(tier Tier, sections ...Section) string {
 	return Stack(contents...)
 }
 
+func StackTightFit(tier Tier, sections ...Section) string {
+	contents := make([]string, 0, len(sections))
+	for _, s := range sections {
+		if tier >= s.MinTier {
+			contents = append(contents, s.Content)
+		}
+	}
+	return StackTight(contents...)
+}
+
 func BodyBudget(height int) int {
 	if height <= 0 {
 		return theme.MinBodyHeight - theme.AppMarginY*2

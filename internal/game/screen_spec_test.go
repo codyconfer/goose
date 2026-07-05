@@ -15,38 +15,39 @@ func leveledState() economy.State {
 	return s
 }
 
-func TestSpecDeskLockedBelowLevel(t *testing.T) {
+func focusDeskPane(t *testing.T, m *Model, ts *tradeScreen, name string) {
+	t.Helper()
+	ring := ts.focusables(m)
+	for i, p := range ring {
+		if p == name {
+			ts.focus = i
+			return
+		}
+	}
+	t.Fatalf("pane %q not focusable; ring=%v", name, ring)
+}
+
+func TestTradeDeskHidesDerivativesWhenLocked(t *testing.T) {
 	m := New(economy.NewMachine(), events.NewMachine(), 0)
-	m = send(m, key("t"))
-	m = send(m, key("d"))
-	if _, ok := m.screen.(*specScreen); ok {
-		t.Fatal("derivatives desk should stay locked below the unlock level")
-	}
-	if !strings.Contains(m.flash, "Derivatives Desk") {
-		t.Fatalf("expected a locked flash, got %q", m.flash)
+	m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
+	if v := m.View(); strings.Contains(v, "WRITE A CONTRACT") {
+		t.Fatalf("derivatives ticket should be hidden below the unlock level:\n%s", v)
 	}
 }
 
-func TestSpecDeskOpensWhenUnlocked(t *testing.T) {
+func TestTradeDeskShowsDerivativesWhenUnlocked(t *testing.T) {
 	m := New(economy.FromState(leveledState()), events.NewMachine(), 0)
-	m = send(m, key("t"))
-	m = send(m, key("d"))
-	ss, ok := m.screen.(*specScreen)
-	if !ok {
-		t.Fatalf("pressing d opened %T, want *specScreen", m.screen)
-	}
-	if ss.prev == nil {
-		t.Fatal("spec desk forgot the screen it came from")
-	}
-	m = send(m, key("esc"))
-	if _, ok := m.screen.(*tradeScreen); !ok {
-		t.Fatalf("esc returned to %T, want *tradeScreen", m.screen)
+	m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
+	if v := m.View(); !strings.Contains(v, "WRITE A CONTRACT") {
+		t.Fatalf("derivatives ticket should be visible once unlocked:\n%s", v)
 	}
 }
 
-func TestSpecDeskOpensACall(t *testing.T) {
+func TestDeskOpensACall(t *testing.T) {
 	m := New(economy.FromState(leveledState()), events.NewMachine(), 0)
-	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
+	ts := &tradeScreen{prev: &gameScreen{}, pos: economy.PosCall}
+	m.screen = ts
+	focusDeskPane(t, &m, ts, "ticket")
 	m = send(m, key("enter"))
 	if len(m.econ.Get().Positions) != 1 {
 		t.Fatalf("open positions=%d, want 1", len(m.econ.Get().Positions))
@@ -56,9 +57,11 @@ func TestSpecDeskOpensACall(t *testing.T) {
 	}
 }
 
-func TestSpecDeskTogglesToPut(t *testing.T) {
+func TestDeskTogglesToPut(t *testing.T) {
 	m := New(economy.FromState(leveledState()), events.NewMachine(), 0)
-	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
+	ts := &tradeScreen{prev: &gameScreen{}, pos: economy.PosCall}
+	m.screen = ts
+	focusDeskPane(t, &m, ts, "ticket")
 	m = send(m, key("right"))
 	m = send(m, key("enter"))
 	pos := m.econ.Get().Positions
@@ -67,10 +70,11 @@ func TestSpecDeskTogglesToPut(t *testing.T) {
 	}
 }
 
-func TestSpecDeskLeverageAdjusts(t *testing.T) {
+func TestDeskLeverageAdjusts(t *testing.T) {
 	m := New(economy.FromState(leveledState()), events.NewMachine(), 0)
-	ss := &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
-	m.screen = ss
+	ts := &tradeScreen{prev: &gameScreen{}, pos: economy.PosCall}
+	m.screen = ts
+	focusDeskPane(t, &m, ts, "ticket")
 	m = send(m, key("]"))
 	m = send(m, key("enter"))
 	pos := m.econ.Get().Positions
@@ -79,49 +83,46 @@ func TestSpecDeskLeverageAdjusts(t *testing.T) {
 	}
 }
 
-func TestSpecDeskCloseAll(t *testing.T) {
+func TestDeskCloseAll(t *testing.T) {
 	s := leveledState()
 	econ := economy.FromState(s)
 	econ.OpenPosition(economy.PosCall, 50, 2, 60)
 	econ.OpenPosition(economy.PosPut, 50, 2, 60)
 	m := New(econ, events.NewMachine(), 0)
-	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
+	ts := &tradeScreen{prev: &gameScreen{}, pos: economy.PosCall}
+	m.screen = ts
+	focusDeskPane(t, &m, ts, "positions")
 	m = send(m, key("c"))
 	if len(m.econ.Get().Positions) != 0 {
 		t.Fatalf("close-all left %d positions", len(m.econ.Get().Positions))
 	}
 }
 
-func TestSpecDeskViewRenders(t *testing.T) {
+func TestDeskViewRendersDerivatives(t *testing.T) {
 	econ := economy.FromState(leveledState())
 	econ.OpenPosition(economy.PosCall, 50, 5, 60)
 	m := New(econ, events.NewMachine(), 0)
-	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
+	m.screen = &tradeScreen{prev: &gameScreen{}, pos: economy.PosCall}
+	m.width, m.height = 80, 120
 	v := m.View()
-	for _, want := range []string{"DERIVATIVES DESK", "WRITE A CONTRACT", "OPEN POSITIONS", "Call", "liq. price", "notional"} {
+	for _, want := range []string{"TRADE DESK", "WRITE A CONTRACT", "OPEN POSITIONS", "Call", "liq. price", "notional"} {
 		if !strings.Contains(v, want) {
-			t.Errorf("spec desk view missing %q", want)
+			t.Errorf("trade desk view missing %q", want)
 		}
 	}
 }
 
-func TestSpecDeskViewDoesNotMutateDefaultKind(t *testing.T) {
+func TestDeskViewDoesNotMutateDefaultKind(t *testing.T) {
 	m := New(economy.FromState(leveledState()), events.NewMachine(), 0)
-	ss := &specScreen{prev: &gameScreen{}}
-	m.screen = ss
+	ts := &tradeScreen{prev: &gameScreen{}}
+	m.screen = ts
 	_ = m.View()
-	if ss.kind != "" {
-		t.Fatalf("view mutated default kind to %q", ss.kind)
+	if ts.pos != "" {
+		t.Fatalf("view mutated default position kind to %q", ts.pos)
 	}
 }
 
-func TestSpecDeskSimulates(t *testing.T) {
-	if !(&specScreen{}).simulates() {
-		t.Error("derivatives desk should keep the heartbeat running")
-	}
-}
-
-func TestSpecDeskScrollsPositionsAndClosesVisibleEntry(t *testing.T) {
+func TestDeskScrollsPositionsAndClosesVisibleEntry(t *testing.T) {
 	s := leveledState()
 	s.Tokens = 1000000
 	econ := economy.FromState(s)
@@ -132,14 +133,14 @@ func TestSpecDeskScrollsPositionsAndClosesVisibleEntry(t *testing.T) {
 	}
 
 	m := New(econ, events.NewMachine(), 0)
-	m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
-	m = send(m, key("tab"))
+	ts := &tradeScreen{prev: &gameScreen{}, pos: economy.PosCall}
+	m.screen = ts
+	focusDeskPane(t, &m, ts, "positions")
 	for i := 0; i < 12; i++ {
 		m = send(m, key("down"))
 	}
 
-	ss := m.screen.(*specScreen)
-	if ss.positions.Offset == 0 {
+	if ts.positions.Offset == 0 {
 		t.Fatal("focused positions scroll did not advance the offset")
 	}
 	if got := m.View(); !strings.Contains(got, "7–12 of 12") {

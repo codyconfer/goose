@@ -109,6 +109,16 @@ func Stack(sections ...string) string {
 	return strings.Join(out, "\n\n")
 }
 
+func StackTight(sections ...string) string {
+	out := make([]string, 0, len(sections))
+	for _, section := range sections {
+		if section != "" {
+			out = append(out, section)
+		}
+	}
+	return strings.Join(out, "\n")
+}
+
 func Box(lines ...string) string {
 	return DefaultFrame().Box(lines...)
 }
