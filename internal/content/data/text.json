@@ -24,6 +24,14 @@
   "activity": {
     "idle": "… the flock waddles about, disrupting nothing in particular. Anything could happen."
   },
+  "viz": {
+    "panel": "📈 HYPE SPECTRUM",
+    "empty": "silence… even the narrative needs a moment to buffer."
+  },
+  "clock": {
+    "panel": "🌍 WORLD CLOCK",
+    "binary_panel": "🔢 BINARY CLOCK"
+  },
   "feed": {
     "panel": "📟 TICKER"
   },
@@ -101,7 +109,12 @@
     "flow_panel": "MARKET FLOW  ·  eggs per second",
     "flow_laying": "Goose Premium",
     "flow_selling": "sold",
-    "flow_demand": "wanted"
+    "flow_demand": "wanted",
+    "spot_section": "SPOT MARKET  ·  actual eggs change hands",
+    "deriv_section": "DERIVATIVES  ·  bet on the bet",
+    "agents_section": "AI AGENTS  ·  the geese trade while you touch grass",
+    "tape_section": "THE TAPE  ·  vibes, quantified",
+    "ledger_section": "LEDGER  ·  the paper trail"
   },
   "spec": {
     "desk_title": "📉 DERIVATIVES DESK  ·  bet on the bet",

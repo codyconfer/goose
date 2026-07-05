@@ -37,6 +37,12 @@ func NewRegistry[Ctx any]() *Registry[Ctx] {
 			MaxCols:  p.Int("maxCols", DefaultFlexMaxCols),
 		}, nil
 	})
+	r.LayoutFn("sections", func(p Params) (Layout, error) {
+		return FlexSections{
+			MinWidth: p.Int("minWidth", DefaultFlexMinWidth),
+			MaxCols:  p.Int("maxCols", DefaultFlexMaxCols),
+		}, nil
+	})
 	r.LayoutFn("grid", func(p Params) (Layout, error) {
 		return Grid{Cols: p.Int("cols", 1), Rows: p.Int("rows", 0)}, nil
 	})

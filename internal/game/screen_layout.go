@@ -39,6 +39,7 @@ var layoutTitles = map[string]string{
 	"flex-columns": "Flex Columns",
 	"flex-rows":    "Flex Rows",
 	"grid":         "Grid",
+	"sections":     "Sections",
 }
 
 func layoutDisplayName(key string) string {
@@ -55,7 +56,7 @@ func layoutParamSpecs(layoutKey string) []paramSpec {
 			{key: "cols", label: "Columns", min: 1, max: 4, def: 2},
 			{key: "rows", label: "Rows", min: 0, max: 4, def: 0},
 		}
-	case "flex-columns", "flex-rows":
+	case "flex-columns", "flex-rows", "sections":
 		return []paramSpec{
 			{key: "minWidth", label: "Min Track Width", min: 20, max: 80, def: layout.DefaultFlexMinWidth},
 			{key: "maxCols", label: "Max Tracks", min: 1, max: 4, def: layout.DefaultFlexMaxCols},
@@ -71,6 +72,7 @@ type layoutEditorScreen struct {
 	specs     map[string]*editSpec
 	themeKeys []string
 	themeIdx  int
+	clockIdx  int
 }
 
 func newLayoutEditor(prev screen) *layoutEditorScreen {
@@ -79,7 +81,7 @@ func newLayoutEditor(prev screen) *layoutEditorScreen {
 		specs[id] = newEditSpec(id)
 	}
 	tk := theme.Keys()
-	return &layoutEditorScreen{prev: prev, specs: specs, themeKeys: tk, themeIdx: currentThemeIndex(tk)}
+	return &layoutEditorScreen{prev: prev, specs: specs, themeKeys: tk, themeIdx: currentThemeIndex(tk), clockIdx: currentClockIndex()}
 }
 
 func newEditSpec(id string) *editSpec {
@@ -148,8 +150,12 @@ func (le *layoutEditorScreen) themePos() int {
 	return 2 + len(le.paramSpecs())
 }
 
-func (le *layoutEditorScreen) paneBase() int {
+func (le *layoutEditorScreen) clockPos() int {
 	return le.themePos() + 1
+}
+
+func (le *layoutEditorScreen) paneBase() int {
+	return le.clockPos() + 1
 }
 
 func (le *layoutEditorScreen) stepTheme(delta int) {
@@ -159,6 +165,14 @@ func (le *layoutEditorScreen) stepTheme(delta int) {
 	le.themeIdx = panels.StepIndex(le.themeIdx, delta, len(le.themeKeys))
 	setTheme(le.themeKeys[le.themeIdx])
 	_ = saveThemeConfig()
+}
+
+func (le *layoutEditorScreen) stepClock(delta int) {
+	if len(clockZoneChoices) == 0 {
+		return
+	}
+	le.clockIdx = panels.StepIndex(le.clockIdx, delta, len(clockZoneChoices))
+	setClockZone(le.clockIdx)
 }
 
 func (le *layoutEditorScreen) rowCount() int {
@@ -235,6 +249,8 @@ func (le *layoutEditorScreen) changeRow(delta int) {
 		le.cursor = panels.ClampIndex(le.cursor, le.rowCount())
 	case le.cursor == le.themePos():
 		le.stepTheme(delta)
+	case le.cursor == le.clockPos():
+		le.stepClock(delta)
 	default:
 		specs := le.paramSpecs()
 		if pi := le.cursor - 2; pi >= 0 && pi < len(specs) {
@@ -318,6 +334,11 @@ func (le *layoutEditorScreen) view(m *Model) string {
 	if len(le.themeKeys) > 0 {
 		tkey := le.themeKeys[panels.ClampIndex(le.themeIdx, len(le.themeKeys))]
 		b.WriteString(le.selectorRow(vk, "Theme", theme.DisplayName(tkey), le.cursor == le.themePos(), le.themeIdx > 0, le.themeIdx < len(le.themeKeys)-1))
+		b.WriteString("\n")
+	}
+	if len(clockZoneChoices) > 0 {
+		ci := panels.ClampIndex(le.clockIdx, len(clockZoneChoices))
+		b.WriteString(le.selectorRow(vk, "World Clock", clockZoneChoices[ci].Label, le.cursor == le.clockPos(), ci > 0, ci < len(clockZoneChoices)-1))
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")

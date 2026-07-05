@@ -1,0 +1,4 @@
+interface:
+  display_name: "Viewkit Test"
+  short_description: "Test code that renders with viewkit"
+  default_prompt: "Use $viewkit-test to write deterministic tests for this viewkit-rendering code."

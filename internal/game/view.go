@@ -20,9 +20,6 @@ func (m Model) View() string {
 	if m.quitting {
 		return theme.Screen(theme.AppFrame.Render(theme.TitleSty.Render(content.Text.App.Quit)), m.width, m.height)
 	}
-	if !layout.FitsScreenWidth(m.width) {
-		return theme.Screen(theme.AppFrame.Render(layout.TooNarrow(m.width)), m.width, m.height)
-	}
 	body := theme.AppFrame.Render(layout.ViewportLayout(m.screen.view(&m), layout.ContentRows(m.height), m.pageScroll))
 	return theme.Screen(body, m.width, m.height)
 }
@@ -186,7 +183,7 @@ func (m Model) panelRows(r layout.TierRows) int {
 func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
 	body := m.screen.view(m)
 	rows := layout.ScrollableRows(body, layout.ContentRows(m.height))
-	if rows <= 0 || !layout.FitsScreenWidth(m.width) {
+	if rows <= 0 {
 		return false
 	}
 
@@ -217,7 +214,7 @@ func (m *Model) handlePageScroll(msg tea.KeyMsg) bool {
 func (m *Model) clampPageScroll() {
 	body := m.screen.view(m)
 	rows := layout.ScrollableRows(body, layout.ContentRows(m.height))
-	if rows <= 0 || !layout.FitsScreenWidth(m.width) {
+	if rows <= 0 {
 		m.pageScroll = 0
 		return
 	}

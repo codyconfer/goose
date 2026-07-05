@@ -136,6 +136,14 @@ type textData struct {
 	Activity struct {
 		Idle string `json:"idle"`
 	} `json:"activity"`
+	Viz struct {
+		Panel string `json:"panel"`
+		Empty string `json:"empty"`
+	} `json:"viz"`
+	Clock struct {
+		Panel       string `json:"panel"`
+		BinaryPanel string `json:"binary_panel"`
+	} `json:"clock"`
 	Feed struct {
 		Panel string `json:"panel"`
 	} `json:"feed"`
@@ -214,6 +222,11 @@ type textData struct {
 		FlowLaying               string `json:"flow_laying"`
 		FlowSelling              string `json:"flow_selling"`
 		FlowDemand               string `json:"flow_demand"`
+		SpotSection              string `json:"spot_section"`
+		DerivSection             string `json:"deriv_section"`
+		AgentsSection            string `json:"agents_section"`
+		TapeSection              string `json:"tape_section"`
+		LedgerSection            string `json:"ledger_section"`
 	} `json:"trade"`
 	Spec struct {
 		DeskTitle       string `json:"desk_title"`

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Viewkit Forms"
+  short_description: "Build forms and confirms with viewkit"
+  default_prompt: "Use $viewkit-forms to wire text inputs, selects, or confirm dialogs into this viewkit screen."

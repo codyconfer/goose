@@ -8,7 +8,7 @@ import (
 func TestNewRegistryHasBuiltinLayouts(t *testing.T) {
 	r := NewRegistry[testCtx]()
 	got := r.LayoutKeys()
-	want := []string{"flex-columns", "flex-rows", "grid", "single"}
+	want := []string{"flex-columns", "flex-rows", "grid", "sections", "single"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("LayoutKeys = %v, want %v", got, want)
 	}
