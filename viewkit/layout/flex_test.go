@@ -23,7 +23,7 @@ func TestFlexColumnsBreakpoints(t *testing.T) {
 
 func TestFlexColumnsDefaults(t *testing.T) {
 	if got := FlexColCount(120, 0, 0); got != 3 {
-		t.Fatalf("FlexColumns with zero opts = %d, want 3 (defaults 40/3)", got)
+		t.Fatalf("FlexColumns with zero opts = %d, want 3 (defaults 40/4, width still fits 3)", got)
 	}
 }
 

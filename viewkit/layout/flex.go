@@ -4,7 +4,7 @@ import "github.com/codyconfer/viewkit/theme"
 
 const (
 	DefaultFlexMinWidth = 40
-	DefaultFlexMaxCols  = 3
+	DefaultFlexMaxCols  = 4
 )
 
 // FlexColCount returns how many equal-width tracks fit in width, given a
