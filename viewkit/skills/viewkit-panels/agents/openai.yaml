@@ -1,0 +1,4 @@
+interface:
+  display_name: "Viewkit Panels"
+  short_description: "Render charts and widgets with viewkit"
+  default_prompt: "Use $viewkit-panels to render charts, tables, or widgets in this viewkit pane."

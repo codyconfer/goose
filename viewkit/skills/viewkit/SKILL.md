@@ -77,6 +77,7 @@ methods (use the frame's width) — prefer the method form: `f.Header`, `f.Panel
 - **Testing viewkit-consuming code** → **viewkit-test**
 
 Full public API by package: [references/api.md](references/api.md).
+Common end-to-end task flows: [references/recipes.md](references/recipes.md).
 
 ## Reference implementation
 
