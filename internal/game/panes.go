@@ -69,30 +69,6 @@ func buildGamePanes() *layout.Registry[gamePaneCtx] {
 			Render:  func(f layout.Frame) string { return c.m.renderActivity(cellFrame(f)) },
 		}, true
 	})
-	r.Pane("spectrum", "Hype Spectrum", func(c gamePaneCtx) (layout.Pane, bool) {
-		return layout.Pane{
-			Name:    "spectrum",
-			Title:   "Hype Spectrum",
-			MinTier: layout.TierTall,
-			Render:  func(f layout.Frame) string { return renderSpectrum(c.m, cellFrame(f)) },
-		}, true
-	})
-	r.Pane("clock", "Clock", func(c gamePaneCtx) (layout.Pane, bool) {
-		return layout.Pane{
-			Name:    "clock",
-			Title:   "Clock",
-			MinTier: layout.TierTall,
-			Render:  func(f layout.Frame) string { return renderClock(c.m, cellFrame(f)) },
-		}, true
-	})
-	r.Pane("binclock", "Binary Clock", func(c gamePaneCtx) (layout.Pane, bool) {
-		return layout.Pane{
-			Name:    "binclock",
-			Title:   "Binary Clock",
-			MinTier: layout.TierTall,
-			Render:  func(f layout.Frame) string { return renderBinaryClock(c.m, cellFrame(f)) },
-		}, true
-	})
 	return r
 }
 
@@ -135,6 +111,9 @@ func buildTradePanes() *layout.Registry[tradePaneCtx] {
 	r.Pane("ledger", "Ledger", func(c tradePaneCtx) (layout.Pane, bool) {
 		s := c.m.econ.Get()
 		return layout.Pane{Name: "ledger", MinTier: layout.TierMedium, Interactive: len(s.Ledger) > c.m.panelRows(ledgerRows), Render: func(f layout.Frame) string { return renderLedger(c.m, cellFrame(f), c.ts.ledger) }}, true
+	})
+	r.Pane("spectrum", "Hype Spectrum", func(c tradePaneCtx) (layout.Pane, bool) {
+		return layout.Pane{Name: "spectrum", Title: "Hype Spectrum", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderSpectrum(c.m, cellFrame(f)) }}, true
 	})
 	r.Pane("clock", "Clock", func(c tradePaneCtx) (layout.Pane, bool) {
 		return layout.Pane{Name: "clock", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderClock(c.m, cellFrame(f)) }}, true
