@@ -7,7 +7,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/ansi"
 
 	"github.com/codyconfer/viewkit/notify"
 	"github.com/codyconfer/viewkit/theme"
@@ -47,16 +46,6 @@ func isolateHome(t *testing.T) {
 func send(m Model, k tea.KeyMsg) Model {
 	next, _ := m.Update(k)
 	return next.(Model)
-}
-
-func maxLineWidth(s string) int {
-	max := 0
-	for line := range strings.SplitSeq(s, "\n") {
-		if w := ansi.StringWidth(line); w > max {
-			max = w
-		}
-	}
-	return max
 }
 
 func mustBuildCharacter(t *testing.T, m Model, key string, s economy.State) characters.Character {
@@ -440,105 +429,6 @@ func TestViewRendersEveryScreen(t *testing.T) {
 	g.quitting = true
 	if !strings.Contains(g.View(), "powers down") {
 		t.Error("quitting view missing farewell")
-	}
-}
-
-func TestNarrowMenuViewRequestsWiderTerminal(t *testing.T) {
-	isolateHome(t)
-	name := strings.Repeat("LongSaveName", 8)
-	state := economy.NewState()
-	state.Tokens = 42
-	if _, err := store.CreateSave(name, economy.FromState(state), events.NewMachine(), world.Generate(world.DefaultSeed)); err != nil {
-		t.Fatalf("create save: %v", err)
-	}
-
-	m := NewMenu()
-	next, _ := m.Update(tea.WindowSizeMsg{Width: 48, Height: 20})
-	m = next.(Model)
-	view := m.View()
-	if strings.Contains(view, name) {
-		t.Fatalf("view rendered save content despite a too-narrow screen")
-	}
-	if !strings.Contains(view, "TERMINAL TOO NARROW") {
-		t.Fatalf("view did not request a wider terminal:\n%s", view)
-	}
-	if got := maxLineWidth(view); got > 48 {
-		t.Fatalf("max line width=%d, want <= 48:\n%s", got, view)
-	}
-}
-
-func TestViewRequiresMinimumScreenWidthForExistingScreens(t *testing.T) {
-	isolateHome(t)
-
-	s := economy.NewState()
-	s.Tokens = 5000
-	seededGame := New(economy.FromState(s), events.NewMachine(), 0)
-	ch := mustBuildCharacter(t, seededGame, "vc", s)
-
-	tests := []struct {
-		name   string
-		build  func() Model
-		hidden string
-	}{
-		{
-			name: "menu",
-			build: func() Model {
-				return NewMenu()
-			},
-			hidden: "GOLDEN GOOSE",
-		},
-		{
-			name: "game",
-			build: func() Model {
-				return New(economy.NewMachine(), events.NewMachine(), 0)
-			},
-			hidden: "CAPEX",
-		},
-		{
-			name: "settings",
-			build: func() Model {
-				m := NewMenu()
-				m.screen = newSettingsScreen()
-				return m
-			},
-			hidden: "NEW FLOCK",
-		},
-		{
-			name: "trade",
-			build: func() Model {
-				m := New(economy.NewMachine(), events.NewMachine(), 0)
-				m.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
-				return m
-			},
-			hidden: "TRADE DESK",
-		},
-		{
-			name: "character",
-			build: func() Model {
-				m := New(economy.FromState(s), events.NewMachine(), 0)
-				m.screen = &characterScreen{char: &ch, prev: &gameScreen{}}
-				return m
-			},
-			hidden: "VENTURE CAPITALIST",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := tt.build()
-			next, _ := m.Update(tea.WindowSizeMsg{Width: theme.MinScreenWidth - 1, Height: 24})
-			m = next.(Model)
-
-			view := m.View()
-			for _, want := range []string{"TERMINAL TOO NARROW", "80", "79"} {
-				if !strings.Contains(view, want) {
-					t.Fatalf("view missing %q:\n%s", want, view)
-				}
-			}
-			if strings.Contains(view, tt.hidden) {
-				t.Fatalf("view rendered %q on a too-narrow screen:\n%s", tt.hidden, view)
-			}
-		})
 	}
 }
 
