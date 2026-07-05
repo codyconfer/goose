@@ -102,6 +102,41 @@ func TestLayoutEditorReorderMovesPane(t *testing.T) {
 	}
 }
 
+func TestLayoutEditorClockPickerSwitchesAndPersists(t *testing.T) {
+	isolateHome(t)
+	defer loadClockConfig()
+	loadClockConfig()
+
+	le := newLayoutEditor(&menuScreen{})
+	if !strings.Contains(le.view(&Model{width: theme.MinScreenWidth, height: 120}), "World Clock") {
+		t.Fatalf("layout editor missing World Clock row:\n%s", le.view(&Model{width: theme.MinScreenWidth, height: 120}))
+	}
+
+	start := uiClock.Timezone
+	le.cursor = le.clockPos()
+	m := New(economy.NewMachine(), events.NewMachine(), 0)
+	le.handleKey(&m, tea.KeyMsg{Type: tea.KeyRight})
+
+	if uiClock.Timezone == start {
+		t.Fatal("stepping the World Clock did not change the active zone")
+	}
+	want := uiClock.Timezone
+
+	data, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".goose", "clock.json"))
+	if err != nil {
+		t.Fatalf("clock.json not written: %v", err)
+	}
+	if !strings.Contains(string(data), want) {
+		t.Fatalf("clock.json missing %q: %s", want, data)
+	}
+
+	uiClock.Timezone = ""
+	loadClockConfig()
+	if uiClock.Timezone != want {
+		t.Fatalf("loadClockConfig did not restore %s, got %q", want, uiClock.Timezone)
+	}
+}
+
 func TestLayoutEditorChangeLayoutPersists(t *testing.T) {
 	isolateHome(t)
 	loadLayoutConfig()

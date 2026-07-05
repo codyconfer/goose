@@ -38,6 +38,22 @@ func TestClockHideSeconds(t *testing.T) {
 	}
 }
 
+func TestClockWorldZones(t *testing.T) {
+	west := time.FixedZone("PST", -8*3600)
+	out := stripANSI(Clock(layout.DefaultFrame(), "CLOCK", clockT, ClockOpts{
+		TwentyFour: true,
+		Zones: []ClockZone{
+			{Label: "LOCAL", Loc: time.UTC},
+			{Label: "WEST", Loc: west},
+		},
+	}))
+	for _, want := range []string{"LOCAL", "13:05:09 UTC", "WEST", "05:05:09 PST"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q:\n%s", want, out)
+		}
+	}
+}
+
 func TestBinaryClockLitBits(t *testing.T) {
 
 	out := stripANSI(BinaryClock(layout.DefaultFrame(), "BINARY", clockT))
