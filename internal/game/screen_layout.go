@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,12 +16,52 @@ type editPane struct {
 	key   string
 	title string
 	on    bool
+	slim  bool
 }
 
 type editSpec struct {
 	layoutIdx int
 	layouts   []string
+	params    map[string]int
 	panes     []editPane
+}
+
+type paramSpec struct {
+	key   string
+	label string
+	min   int
+	max   int
+	def   int
+}
+
+var layoutTitles = map[string]string{
+	"single":       "Single Column",
+	"flex-columns": "Flex Columns",
+	"flex-rows":    "Flex Rows",
+	"grid":         "Grid",
+}
+
+func layoutDisplayName(key string) string {
+	if t, ok := layoutTitles[key]; ok {
+		return t
+	}
+	return key
+}
+
+func layoutParamSpecs(layoutKey string) []paramSpec {
+	switch layoutKey {
+	case "grid":
+		return []paramSpec{
+			{key: "cols", label: "Columns", min: 1, max: 4, def: 2},
+			{key: "rows", label: "Rows", min: 0, max: 4, def: 0},
+		}
+	case "flex-columns", "flex-rows":
+		return []paramSpec{
+			{key: "minWidth", label: "Min Track Width", min: 20, max: 80, def: layout.DefaultFlexMinWidth},
+			{key: "maxCols", label: "Max Tracks", min: 1, max: 4, def: layout.DefaultFlexMaxCols},
+		}
+	}
+	return nil
 }
 
 type layoutEditorScreen struct {
@@ -46,6 +87,7 @@ func newEditSpec(id string) *editSpec {
 		title[in.Key] = in.Title
 	}
 
+	slim := map[string]bool{}
 	seen := map[string]bool{}
 	var panes []editPane
 	for _, ref := range spec.Panes {
@@ -53,8 +95,9 @@ func newEditSpec(id string) *editSpec {
 		if !ok {
 			continue
 		}
-		panes = append(panes, editPane{key: ref.Key, title: t, on: true})
+		panes = append(panes, editPane{key: ref.Key, title: t, on: true, slim: ref.Slim})
 		seen[ref.Key] = true
+		slim[ref.Key] = ref.Slim
 	}
 	for _, in := range infos {
 		if seen[in.Key] {
@@ -64,7 +107,11 @@ func newEditSpec(id string) *editSpec {
 	}
 
 	layouts := layoutKeys(id)
-	return &editSpec{layoutIdx: layoutIndex(layouts, spec.Layout), layouts: layouts, panes: panes}
+	params := map[string]int{}
+	for _, ps := range layoutParamSpecs(spec.Layout) {
+		params[ps.key] = spec.LayoutParams.Int(ps.key, ps.def)
+	}
+	return &editSpec{layoutIdx: layoutIndex(layouts, spec.Layout), layouts: layouts, params: params, panes: panes}
 }
 
 func layoutIndex(layouts []string, want string) int {
@@ -82,8 +129,39 @@ func (le *layoutEditorScreen) current() *editSpec {
 	return le.specs[configurableScreens[le.screenIdx]]
 }
 
+func (le *layoutEditorScreen) currentLayoutKey() string {
+	es := le.current()
+	if es.layoutIdx >= 0 && es.layoutIdx < len(es.layouts) {
+		return es.layouts[es.layoutIdx]
+	}
+	return "single"
+}
+
+func (le *layoutEditorScreen) paramSpecs() []paramSpec {
+	return layoutParamSpecs(le.currentLayoutKey())
+}
+
+func (le *layoutEditorScreen) paneBase() int {
+	return 2 + len(le.paramSpecs())
+}
+
 func (le *layoutEditorScreen) rowCount() int {
-	return 2 + len(le.current().panes)
+	return le.paneBase() + len(le.current().panes)
+}
+
+func (le *layoutEditorScreen) paneIndex() (int, bool) {
+	p := le.cursor - le.paneBase()
+	if p >= 0 && p < len(le.current().panes) {
+		return p, true
+	}
+	return 0, false
+}
+
+func (le *layoutEditorScreen) paramValue(ps paramSpec) int {
+	if v, ok := le.current().params[ps.key]; ok {
+		return v
+	}
+	return ps.def
 }
 
 func (le *layoutEditorScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
@@ -91,7 +169,6 @@ func (le *layoutEditorScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	es := le.current()
 	le.cursor = panels.ClampIndex(le.cursor, le.rowCount())
 	switch action {
 	case keys.Quit:
@@ -108,8 +185,12 @@ func (le *layoutEditorScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 	case keys.Right:
 		le.changeRow(1)
 	case keys.Confirm:
-		if p := le.cursor - 2; p >= 0 && p < len(es.panes) {
-			es.panes[p].on = !es.panes[p].on
+		if p, ok := le.paneIndex(); ok {
+			le.current().panes[p].on = !le.current().panes[p].on
+		}
+	case actLayoutSlim:
+		if p, ok := le.paneIndex(); ok {
+			le.current().panes[p].slim = !le.current().panes[p].slim
 		}
 	case keys.Inc:
 		le.reorder(1)
@@ -135,33 +216,61 @@ func (le *layoutEditorScreen) changeRow(delta int) {
 		if len(es.layouts) > 0 {
 			es.layoutIdx = panels.StepIndex(es.layoutIdx, delta, len(es.layouts))
 		}
+		le.cursor = panels.ClampIndex(le.cursor, le.rowCount())
+	default:
+		specs := le.paramSpecs()
+		if pi := le.cursor - 2; pi >= 0 && pi < len(specs) {
+			ps := specs[pi]
+			v := le.paramValue(ps) + delta
+			if v < ps.min {
+				v = ps.min
+			}
+			if v > ps.max {
+				v = ps.max
+			}
+			le.current().params[ps.key] = v
+		}
 	}
 }
 
 func (le *layoutEditorScreen) reorder(delta int) {
-	es := le.current()
-	p := le.cursor - 2
+	p, ok := le.paneIndex()
+	if !ok {
+		return
+	}
 	q := p + delta
-	if p < 0 || p >= len(es.panes) || q < 0 || q >= len(es.panes) {
+	es := le.current()
+	if q < 0 || q >= len(es.panes) {
 		return
 	}
 	es.panes[p], es.panes[q] = es.panes[q], es.panes[p]
-	le.cursor = q + 2
+	le.cursor += delta
 }
 
 func (le *layoutEditorScreen) apply() error {
 	for id, es := range le.specs {
-		var refs []layout.PaneRef
+		var panes []layout.PaneRef
 		for _, p := range es.panes {
 			if p.on {
-				refs = append(refs, layout.PaneRef{Key: p.key})
+				panes = append(panes, layout.PaneRef{Key: p.key, Slim: p.slim})
 			}
 		}
 		lay := "single"
 		if es.layoutIdx >= 0 && es.layoutIdx < len(es.layouts) {
 			lay = es.layouts[es.layoutIdx]
 		}
-		setLayoutSpec(id, layout.ScreenSpec{Layout: lay, Panes: refs})
+		var lp layout.Params
+		if specs := layoutParamSpecs(lay); len(specs) > 0 {
+			lp = layout.Params{}
+			for _, ps := range specs {
+				v := ps.def
+				if got, ok := es.params[ps.key]; ok {
+					v = got
+				}
+				lp[ps.key] = v
+			}
+		}
+		setLayoutSpec(id, layout.ScreenSpec{Layout: lay, LayoutParams: lp, Panes: panes})
 	}
 	return saveLayoutConfig()
 }
@@ -173,20 +282,25 @@ func (le *layoutEditorScreen) view(m *Model) string {
 	es := le.current()
 
 	var b strings.Builder
-	b.WriteString(vk.Header("SCREEN LAYOUT", "pick a layout, then toggle and reorder panels"))
+	b.WriteString(vk.Header("SCREEN LAYOUT", "pick a layout, then toggle, reorder, and slim panels"))
 	b.WriteString("\n\n")
 
 	b.WriteString(le.selectorRow(vk, "Screen", screenTitles[id], le.cursor == 0, le.screenIdx > 0, le.screenIdx < len(configurableScreens)-1))
 	b.WriteString("\n")
-	layName := "single"
-	if es.layoutIdx >= 0 && es.layoutIdx < len(es.layouts) {
-		layName = es.layouts[es.layoutIdx]
-	}
-	b.WriteString(le.selectorRow(vk, "Layout", layName, le.cursor == 1, es.layoutIdx > 0, es.layoutIdx < len(es.layouts)-1))
-	b.WriteString("\n\n")
+	b.WriteString(le.selectorRow(vk, "Layout", layoutDisplayName(le.currentLayoutKey()), le.cursor == 1, es.layoutIdx > 0, es.layoutIdx < len(es.layouts)-1))
+	b.WriteString("\n")
 
+	specs := le.paramSpecs()
+	for i, ps := range specs {
+		v := le.paramValue(ps)
+		b.WriteString(le.selectorRow(vk, ps.label, paramDisplay(ps, v), le.cursor == 2+i, v > ps.min, v < ps.max))
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
+
+	base := le.paneBase()
 	for i, p := range es.panes {
-		selected := le.cursor == 2+i
+		selected := le.cursor == base+i
 		mark := theme.DimSty.Render("·")
 		label := theme.DimSty.Render(p.title)
 		if p.on {
@@ -198,7 +312,24 @@ func (le *layoutEditorScreen) view(m *Model) string {
 		} else if selected {
 			label = theme.ValSty.Render(p.title)
 		}
-		b.WriteString(vk.Spread(vk.Selectable(label, selected), mark))
+		var right string
+		slimTag := "     "
+		if p.slim {
+			slimTag = theme.KeySty.Render("slim ")
+		}
+		if selected {
+			up, down := " ", " "
+			if i > 0 {
+				up = theme.KeySty.Render("▴")
+			}
+			if i < len(es.panes)-1 {
+				down = theme.KeySty.Render("▾")
+			}
+			right = up + down + "  " + slimTag + mark
+		} else {
+			right = slimTag + mark
+		}
+		b.WriteString(vk.Spread(vk.Selectable(label, selected), right))
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")
@@ -209,15 +340,23 @@ func (le *layoutEditorScreen) view(m *Model) string {
 
 	km := layoutEditorKeymap()
 	hints := [][2]string{km.Hint(keys.Up)}
-	switch le.cursor {
-	case 0, 1:
+	if le.cursor <= 1 {
 		hints = append(hints, km.Hint(keys.Left))
-	default:
-		hints = append(hints, km.Hint(keys.Confirm), km.Hint(keys.Inc))
+	} else if le.cursor < base {
+		hints = append(hints, km.HintLabeled(keys.Left, "adjust"))
+	} else {
+		hints = append(hints, km.Hint(keys.Confirm), km.Hint(keys.Inc), km.Hint(actLayoutSlim))
 	}
 	hints = append(hints, km.Hint(actLayoutSave), km.Hint(keys.Cancel))
 	b.WriteString(vk.HintLine(hints...))
 	return b.String()
+}
+
+func paramDisplay(ps paramSpec, v int) string {
+	if ps.key == "rows" && v == 0 {
+		return "auto"
+	}
+	return strconv.Itoa(v)
 }
 
 func (le *layoutEditorScreen) selectorRow(vk layout.Frame, label, value string, selected, canLeft, canRight bool) string {

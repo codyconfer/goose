@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/codyconfer/viewkit/forms"
 	"github.com/codyconfer/viewkit/keys"
 	"github.com/codyconfer/viewkit/panels"
 	"github.com/codyconfer/viewkit/theme"
@@ -25,7 +25,7 @@ type settingRow struct {
 type settingsScreen struct {
 	rows   []settingRow
 	cursor int
-	seed   string
+	seed   *forms.Form
 }
 
 func newSettingsScreen() *settingsScreen {
@@ -36,9 +36,22 @@ func newSettingsScreen() *settingsScreen {
 			{spec: content.Settings.EventPace, idx: def.EventIdx()},
 			{spec: content.Settings.MarketPace, idx: def.MarketIdx()},
 		},
-		seed: fmt.Sprintf("%d", time.Now().UnixNano()),
+		seed: forms.NewForm(forms.Field{
+			Key:  "seed",
+			Kind: forms.FieldText,
+			Text: fmt.Sprintf("%d", time.Now().UnixNano()),
+		}),
 	}
 }
+
+func (ss *settingsScreen) seedForm() *forms.Form {
+	if ss.seed == nil {
+		ss.seed = forms.NewForm(forms.Field{Key: "seed", Kind: forms.FieldText})
+	}
+	return ss.seed
+}
+
+func (ss *settingsScreen) seedText() string { return ss.seedForm().Focused().Text }
 
 func (ss *settingsScreen) simulates() bool { return false }
 
@@ -57,10 +70,11 @@ func (ss *settingsScreen) settings() economy.Settings {
 }
 
 func (ss *settingsScreen) seedValue() int64 {
-	if strings.TrimSpace(ss.seed) == "" {
+	txt := strings.TrimSpace(ss.seedText())
+	if txt == "" {
 		return time.Now().UnixNano()
 	}
-	seed, err := strconv.ParseInt(ss.seed, 10, 64)
+	seed, err := strconv.ParseInt(txt, 10, 64)
 	if err != nil {
 		return time.Now().UnixNano()
 	}
@@ -73,11 +87,7 @@ func (ss *settingsScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 	action, ok := settingsKeymap().Action(msg.String())
 	if !ok {
 		if ss.cursor == len(ss.rows) {
-			for _, r := range msg.Runes {
-				if unicode.IsDigit(r) || (r == '-' && ss.seed == "") {
-					ss.seed += string(r)
-				}
-			}
+			ss.seedForm().Insert(string(msg.Runes))
 		}
 		return nil
 	}
@@ -103,14 +113,11 @@ func (ss *settingsScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		}
 	case actReroll:
 		if ss.cursor == len(ss.rows) {
-			ss.seed = fmt.Sprintf("%d", time.Now().UnixNano())
+			ss.seedForm().Focused().Text = fmt.Sprintf("%d", time.Now().UnixNano())
 		}
 	case keys.Erase:
 		if ss.cursor == len(ss.rows) {
-			rs := []rune(ss.seed)
-			if len(rs) > 0 {
-				ss.seed = string(rs[:len(rs)-1])
-			}
+			ss.seedForm().Handle(keys.Erase)
 		}
 	case keys.Confirm:
 		m.foundFlock(ss.settings(), ss.seedValue())
@@ -157,9 +164,10 @@ func (ss *settingsScreen) view(m *Model) string {
 	}
 
 	seedSelected := cursor == len(ss.rows)
-	seedValue := theme.ValSty.Render(ss.seed)
+	seedTxt := ss.seedText()
+	seedValue := theme.ValSty.Render(seedTxt)
 	if seedSelected {
-		seedValue = theme.AccentSty.Render(ss.seed)
+		seedValue = theme.AccentSty.Render(seedTxt)
 	}
 	b.WriteString(vk.Spread(vk.Selectable("World Seed", seedSelected), seedValue))
 	b.WriteString("\n")

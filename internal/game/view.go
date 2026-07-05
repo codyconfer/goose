@@ -14,7 +14,6 @@ import (
 
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/notify"
 )
 
 func (m Model) View() string {
@@ -104,20 +103,16 @@ func (m Model) renderShutdown() string {
 	return theme.NotifNegativeSty.Render(body)
 }
 
-func (m Model) renderActivity() string {
+func (m Model) renderActivity(vk layout.Frame) string {
 	if m.notifs.Active() {
-		return m.renderNotification()
+		return m.renderNotification(vk)
 	}
-	return theme.NotifIdleSty.Render(lipgloss.NewStyle().Width(m.frame().Width).Render(content.Text.Activity.Idle))
+	return theme.NotifIdleSty.Render(lipgloss.NewStyle().Width(vk.Width).Render(content.Text.Activity.Idle))
 }
 
-func (m Model) renderFeed(offset int, focused bool) string {
+func (m Model) renderFeed(vk layout.Frame, offset int) string {
 	if !m.feed.active() {
 		return ""
-	}
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
 	}
 	raw := m.feed.lines()
 
@@ -132,8 +127,7 @@ func (m Model) feedScrollable() bool {
 	return m.feed.size() > m.panelRows(feedRows)
 }
 
-func (m Model) renderMarket() string {
-	vk := m.frame()
+func (m Model) renderMarket(vk layout.Frame) string {
 	s := m.econ.Get()
 	priceTag := theme.DimSty.Render(content.Text.Market.PriceSteady)
 	switch {
@@ -175,29 +169,12 @@ func (m Model) renderFooter(km *keys.Map, focusVerb string, ringSize int) string
 	return m.frame().HintLine(hints...)
 }
 
-func (m Model) renderNotification() string {
+func (m Model) renderNotification(vk layout.Frame) string {
 	n, ok := m.notifs.Current()
 	if !ok {
 		return ""
 	}
-	return notificationCard(n.Title, n.Message, n.Tone, m.frame().Width)
-}
-
-func notificationCard(title, message string, tone notify.Tone, width int) string {
-	sty := theme.NotifNeutralSty
-	switch tone {
-	case notify.TonePositive:
-		sty = theme.NotifPositiveSty
-	case notify.ToneWarning:
-		sty = theme.NotifWarningSty
-	case notify.ToneNegative:
-		sty = theme.NotifNegativeSty
-	}
-	body := lipgloss.JoinVertical(lipgloss.Left,
-		lipgloss.NewStyle().Bold(true).Render(title),
-		lipgloss.NewStyle().Width(width).Render(message),
-	)
-	return sty.Render(body)
+	return panels.NotificationCard(vk, n)
 }
 
 func (m Model) heightTier() layout.Tier { return layout.TierForHeight(m.height) }

@@ -6,6 +6,7 @@ type Pane struct {
 	Interactive bool
 	MinTier     Tier
 	Pos         *GridPos
+	Slim        bool
 	Render      func(Frame) string
 }
 

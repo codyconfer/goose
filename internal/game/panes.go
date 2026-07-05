@@ -44,7 +44,7 @@ func buildGamePanes() *layout.Registry[gamePaneCtx] {
 			Name:        "capex",
 			Title:       "Capital Expenditure",
 			Interactive: true,
-			Render:      func(f layout.Frame) string { return c.gs.renderCapex(c.m, f.Focused) },
+			Render:      func(f layout.Frame) string { return c.gs.renderCapex(c.m, cellFrame(f)) },
 		}, true
 	})
 	r.Pane("market", "Market", func(c gamePaneCtx) (layout.Pane, bool) {
@@ -53,7 +53,7 @@ func buildGamePanes() *layout.Registry[gamePaneCtx] {
 			Name:    "market",
 			Title:   "Market",
 			MinTier: layout.TierTall,
-			Render:  static(c.m.renderMarket),
+			Render:  func(f layout.Frame) string { return c.m.renderMarket(cellFrame(f)) },
 		}, s.EggsPerSecond() > 0 || s.Eggs > 0
 	})
 	r.Pane("orders", "Orders", func(c gamePaneCtx) (layout.Pane, bool) {
@@ -62,7 +62,7 @@ func buildGamePanes() *layout.Registry[gamePaneCtx] {
 			Name:    "orders",
 			Title:   "Orders",
 			MinTier: layout.TierTall,
-			Render:  func(layout.Frame) string { return renderTransactions(c.m, c.m.frame(), layout.ScrollState{}) },
+			Render:  func(f layout.Frame) string { return renderTransactions(c.m, cellFrame(f), layout.ScrollState{}) },
 		}, len(s.Transactions) > 0 || s.Demand() > 0
 	})
 	r.Pane("feed", "Feed", func(c gamePaneCtx) (layout.Pane, bool) {
@@ -70,7 +70,7 @@ func buildGamePanes() *layout.Registry[gamePaneCtx] {
 			Name:        "feed",
 			Title:       "Feed",
 			Interactive: c.m.feedScrollable(),
-			Render:      func(f layout.Frame) string { return c.m.renderFeed(c.gs.feedScroll.Offset, f.Focused) },
+			Render:      func(f layout.Frame) string { return c.m.renderFeed(cellFrame(f), c.gs.feedScroll.Offset) },
 		}, true
 	})
 	r.Pane("activity", "Activity", func(c gamePaneCtx) (layout.Pane, bool) {
@@ -78,7 +78,7 @@ func buildGamePanes() *layout.Registry[gamePaneCtx] {
 			Name:    "activity",
 			Title:   "Activity",
 			MinTier: layout.TierMedium,
-			Render:  static(c.m.renderActivity),
+			Render:  func(f layout.Frame) string { return c.m.renderActivity(cellFrame(f)) },
 		}, true
 	})
 	return r

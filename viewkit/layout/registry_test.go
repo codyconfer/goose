@@ -8,7 +8,7 @@ import (
 func TestNewRegistryHasBuiltinLayouts(t *testing.T) {
 	r := NewRegistry[testCtx]()
 	got := r.LayoutKeys()
-	want := []string{"flex", "grid", "single"}
+	want := []string{"flex-columns", "flex-rows", "grid", "single"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("LayoutKeys = %v, want %v", got, want)
 	}
@@ -16,13 +16,13 @@ func TestNewRegistryHasBuiltinLayouts(t *testing.T) {
 
 func TestBuiltinFlexReadsParams(t *testing.T) {
 	r := NewRegistry[testCtx]()
-	l, err := r.layouts["flex"](Params{"minWidth": 25, "maxCols": 4})
+	l, err := r.layouts["flex-columns"](Params{"minWidth": 25, "maxCols": 4})
 	if err != nil {
 		t.Fatalf("flex factory: %v", err)
 	}
-	fg, ok := l.(FlexGrid)
+	fg, ok := l.(FlexColumns)
 	if !ok {
-		t.Fatalf("want FlexGrid, got %T", l)
+		t.Fatalf("want FlexColumns, got %T", l)
 	}
 	if fg.MinWidth != 25 || fg.MaxCols != 4 {
 		t.Fatalf("flex params = %+v, want {25 4}", fg)
@@ -31,8 +31,8 @@ func TestBuiltinFlexReadsParams(t *testing.T) {
 
 func TestBuiltinFlexDefaults(t *testing.T) {
 	r := NewRegistry[testCtx]()
-	l, _ := r.layouts["flex"](nil)
-	fg := l.(FlexGrid)
+	l, _ := r.layouts["flex-columns"](nil)
+	fg := l.(FlexColumns)
 	if fg.MinWidth != DefaultFlexMinWidth || fg.MaxCols != DefaultFlexMaxCols {
 		t.Fatalf("flex defaults = %+v, want {%d %d}", fg, DefaultFlexMinWidth, DefaultFlexMaxCols)
 	}

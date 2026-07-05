@@ -31,6 +31,7 @@ type PaneRef struct {
 	Key     string   `json:"key"`
 	Pos     *GridPos `json:"pos,omitempty"`
 	MinTier *Tier    `json:"minTier,omitempty"`
+	Slim    bool     `json:"slim,omitempty"`
 }
 
 type ScreenSpec struct {
@@ -72,6 +73,9 @@ func BuildScreen[Ctx any](s ScreenSpec, ctx Ctx, r *Registry[Ctx]) (Screen, erro
 		}
 		if ref.MinTier != nil {
 			p.MinTier = *ref.MinTier
+		}
+		if ref.Slim {
+			p.Slim = true
 		}
 		panes = append(panes, p)
 	}

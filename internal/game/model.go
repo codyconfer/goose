@@ -6,11 +6,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/codyconfer/viewkit/notify"
+
 	"github.com/codyconfer/goose/internal/characters"
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
-	"github.com/codyconfer/goose/internal/notify"
 	"github.com/codyconfer/goose/internal/store"
 	"github.com/codyconfer/goose/internal/world"
 )

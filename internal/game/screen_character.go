@@ -6,12 +6,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/codyconfer/viewkit/keys"
+	"github.com/codyconfer/viewkit/notify"
 	"github.com/codyconfer/viewkit/panels"
 	"github.com/codyconfer/viewkit/theme"
 
 	"github.com/codyconfer/goose/internal/characters"
 	"github.com/codyconfer/goose/internal/content"
-	"github.com/codyconfer/goose/internal/notify"
 )
 
 type characterScreen struct {
@@ -88,7 +88,7 @@ func (cs *characterScreen) view(m *Model) string {
 	b.WriteString("\n\n")
 
 	if cs.notification != nil {
-		b.WriteString(notificationCard(cs.notification.Title, cs.notification.Message, cs.notification.Tone, vk.Width))
+		b.WriteString(panels.NotificationCard(vk, *cs.notification))
 		b.WriteString("\n\n")
 		km := characterNotifyKeymap()
 		b.WriteString(vk.HintLine(km.Hint(keys.Confirm)))

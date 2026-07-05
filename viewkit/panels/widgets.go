@@ -3,8 +3,21 @@ package panels
 import (
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
+
+	"github.com/codyconfer/viewkit/layout"
+	"github.com/codyconfer/viewkit/notify"
 	"github.com/codyconfer/viewkit/theme"
 )
+
+func NotificationCard(f layout.Frame, n notify.Notification) string {
+	t := theme.Cur()
+	body := lipgloss.JoinVertical(lipgloss.Left,
+		t.NotifTitle.Render(n.Title),
+		lipgloss.NewStyle().Width(f.Width).Render(n.Message),
+	)
+	return toneStyle(n.Tone).Render(body)
+}
 
 func ProgressBar(frac float64, width int) string {
 	if frac < 0 {

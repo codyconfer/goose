@@ -4,12 +4,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/codyconfer/viewkit/forms"
+	"github.com/codyconfer/viewkit/notify"
 	"github.com/codyconfer/viewkit/theme"
 
 	"github.com/codyconfer/goose/internal/characters"
 	"github.com/codyconfer/goose/internal/economy"
 	"github.com/codyconfer/goose/internal/events"
-	"github.com/codyconfer/goose/internal/notify"
 	"github.com/codyconfer/goose/internal/store"
 )
 
@@ -125,9 +126,8 @@ func TestMenuLegendsShowModeSpecificKeys(t *testing.T) {
 
 	m.screen = &menuScreen{
 		items:  menuItems(nil),
-		mode:   menuModeRename,
+		rename: forms.NewForm(forms.Field{Key: "name", Label: "Rename Alpha", Kind: forms.FieldText, Text: "Alpha"}),
 		target: store.SaveInfo{Name: "Alpha"},
-		edit:   "Alpha",
 	}
 	assertHintText(t, renderForHints(m),
 		"type",
@@ -137,9 +137,9 @@ func TestMenuLegendsShowModeSpecificKeys(t *testing.T) {
 	)
 
 	m.screen = &menuScreen{
-		items:  menuItems(nil),
-		mode:   menuModeDelete,
-		target: store.SaveInfo{Name: "Alpha"},
+		items:   menuItems(nil),
+		confirm: &forms.Confirm{Title: "DELETE SAVE", Message: "Delete Alpha?", Yes: true},
+		target:  store.SaveInfo{Name: "Alpha"},
 	}
 	assertHintText(t, renderForHints(m),
 		"y",

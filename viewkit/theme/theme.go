@@ -46,6 +46,7 @@ var (
 	NotifWarningSty  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(orange).Foreground(orange).Padding(0, 1)
 	NotifNegativeSty = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(rd).Foreground(rd).Padding(0, 1)
 	NotifIdleSty     = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(dim).Foreground(dim).Padding(0, 1)
+	NotifTitleSty    = lipgloss.NewStyle().Bold(true)
 
 	Series = []lipgloss.Style{
 		lipgloss.NewStyle().Foreground(gold),
@@ -83,6 +84,7 @@ type Theme struct {
 	NotifWarning  lipgloss.Style
 	NotifNegative lipgloss.Style
 	NotifIdle     lipgloss.Style
+	NotifTitle    lipgloss.Style
 
 	Series []lipgloss.Style
 
@@ -112,6 +114,7 @@ func Default() Theme {
 		NotifWarning:  NotifWarningSty,
 		NotifNegative: NotifNegativeSty,
 		NotifIdle:     NotifIdleSty,
+		NotifTitle:    NotifTitleSty,
 
 		Series: Series,
 

@@ -3,13 +3,12 @@ package game
 import (
 	"fmt"
 	"strings"
-	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/codyconfer/viewkit/forms"
 	"github.com/codyconfer/viewkit/keys"
 	"github.com/codyconfer/viewkit/panels"
-	"github.com/codyconfer/viewkit/theme"
 
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
@@ -31,30 +30,22 @@ type menuItem struct {
 	save   store.SaveInfo
 }
 
-type menuMode int
-
-const (
-	menuModeNormal menuMode = iota
-	menuModeRename
-	menuModeDelete
-)
-
 type menuScreen struct {
-	items  []menuItem
-	cursor int
-	mode   menuMode
-	edit   string
-	target store.SaveInfo
+	items   []menuItem
+	cursor  int
+	rename  *forms.Form
+	confirm *forms.Confirm
+	target  store.SaveInfo
 }
 
 func (ms *menuScreen) simulates() bool { return false }
 
 func (ms *menuScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
-	switch ms.mode {
-	case menuModeRename:
+	if ms.rename != nil {
 		return ms.handleRename(m, msg)
-	case menuModeDelete:
-		return ms.handleDelete(m, msg)
+	}
+	if ms.confirm != nil {
+		return ms.handleConfirm(m, msg)
 	}
 
 	action, ok := menuKeymap().Action(msg.String())
@@ -69,14 +60,24 @@ func (ms *menuScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		return ms.startNew(m)
 	case actMenuRename:
 		if save, ok := ms.selectedSave(); ok {
-			ms.mode = menuModeRename
+			ms.rename = forms.NewForm(forms.Field{
+				Key:   "name",
+				Label: "Rename " + save.Name,
+				Kind:  forms.FieldText,
+				Text:  save.Name,
+			})
 			ms.target = save
-			ms.edit = save.Name
 			m.flash = ""
 		}
 	case actMenuDelete:
 		if save, ok := ms.selectedSave(); ok {
-			ms.mode = menuModeDelete
+			ms.confirm = &forms.Confirm{
+				Title:    "DELETE SAVE",
+				Message:  "Delete " + save.Name + "?",
+				YesLabel: "delete",
+				NoLabel:  "cancel",
+				Yes:      true,
+			}
 			ms.target = save
 			m.flash = ""
 		}
@@ -147,16 +148,12 @@ func (m *Model) foundFlock(set economy.Settings, seed int64) {
 func (ms *menuScreen) handleRename(m *Model, msg tea.KeyMsg) tea.Cmd {
 	action, ok := menuRenameKeymap().Action(msg.String())
 	if !ok {
-		for _, r := range msg.Runes {
-			if unicode.IsPrint(r) {
-				ms.edit += string(r)
-			}
-		}
+		ms.rename.Insert(string(msg.Runes))
 		return nil
 	}
 	switch action {
 	case actMenuSave:
-		name := store.CleanName(ms.edit)
+		name := store.CleanName(ms.rename.Focused().Text)
 		if name == "" {
 			m.setFlash("Save name can't be empty.")
 			return nil
@@ -169,30 +166,30 @@ func (ms *menuScreen) handleRename(m *Model, msg tea.KeyMsg) tea.Cmd {
 			m.saveName = name
 		}
 		id := ms.target.ID
-		ms.mode = menuModeNormal
-		ms.edit = ""
+		ms.rename = nil
 		m.refreshSaves(ms)
 		ms.selectSave(id)
 	case keys.Cancel:
-		ms.mode = menuModeNormal
-		ms.edit = ""
+		ms.rename = nil
 	case keys.Erase:
-		rs := []rune(ms.edit)
-		if len(rs) > 0 {
-			ms.edit = string(rs[:len(rs)-1])
-		}
+		ms.rename.Handle(keys.Erase)
 	}
 	return nil
 }
 
-func (ms *menuScreen) handleDelete(m *Model, msg tea.KeyMsg) tea.Cmd {
+func (ms *menuScreen) handleConfirm(m *Model, msg tea.KeyMsg) tea.Cmd {
 	action, ok := menuDeleteKeymap().Action(msg.String())
 	if !ok {
 		return nil
 	}
-	switch action {
-	case actConfirmYes:
+	switch ms.confirm.Handle(action) {
+	case forms.Submitted:
+		yes := ms.confirm.Yes
 		id := ms.target.ID
+		ms.confirm = nil
+		if !yes {
+			return nil
+		}
 		if err := store.DeleteSave(id); err != nil {
 			m.setFlash("Couldn't delete the save.")
 			return nil
@@ -201,10 +198,9 @@ func (ms *menuScreen) handleDelete(m *Model, msg tea.KeyMsg) tea.Cmd {
 			m.saveID = 0
 			m.saveName = ""
 		}
-		ms.mode = menuModeNormal
 		m.refreshSaves(ms)
-	case keys.Cancel:
-		ms.mode = menuModeNormal
+	case forms.Cancelled:
+		ms.confirm = nil
 	}
 	return nil
 }
@@ -216,17 +212,12 @@ func (ms *menuScreen) view(m *Model) string {
 	b.WriteString(vk.Header(content.Text.App.Title, content.Text.App.Tagline))
 	b.WriteString("\n\n")
 
-	switch ms.mode {
-	case menuModeRename:
-		b.WriteString(vk.Panel("SAVE NAME",
-			theme.DimSty.Render("Rename "+ms.target.Name),
-			theme.AccentSty.Render(vk.Fit(ms.edit)),
-		))
+	switch {
+	case ms.rename != nil:
+		b.WriteString(ms.rename.Render(vk, "SAVE NAME"))
 		b.WriteString("\n\n")
-	case menuModeDelete:
-		b.WriteString(vk.Panel("DELETE SAVE",
-			theme.CantSty.Render(vk.Fit("Delete "+ms.target.Name+"?")),
-		))
+	case ms.confirm != nil:
+		b.WriteString(ms.confirm.Render(vk))
 		b.WriteString("\n\n")
 	}
 
@@ -239,8 +230,8 @@ func (ms *menuScreen) view(m *Model) string {
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")
-	switch ms.mode {
-	case menuModeRename:
+	switch {
+	case ms.rename != nil:
 		km := menuRenameKeymap()
 		b.WriteString(vk.HintLine(
 			[2]string{"type", "rename"},
@@ -248,9 +239,9 @@ func (ms *menuScreen) view(m *Model) string {
 			km.Hint(actMenuSave),
 			km.Hint(keys.Cancel),
 		))
-	case menuModeDelete:
+	case ms.confirm != nil:
 		km := menuDeleteKeymap()
-		b.WriteString(vk.HintLine(km.Hint(actConfirmYes), km.Hint(keys.Cancel)))
+		b.WriteString(vk.HintLine(km.Hint(keys.Confirm), km.Hint(keys.Cancel)))
 	default:
 		km := menuKeymap()
 		b.WriteString(vk.HintLine(

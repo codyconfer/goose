@@ -7,12 +7,12 @@ import (
 
 	"github.com/codyconfer/viewkit/keys"
 	"github.com/codyconfer/viewkit/layout"
+	"github.com/codyconfer/viewkit/notify"
 	"github.com/codyconfer/viewkit/panels"
 	"github.com/codyconfer/viewkit/theme"
 
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/notify"
 )
 
 var (

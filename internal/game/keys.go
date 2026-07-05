@@ -29,11 +29,11 @@ const (
 	actMenuDelete keys.Action = "menu.delete"
 	actMenuSave   keys.Action = "menu.save"
 	actMenuLayout keys.Action = "menu.layout"
-	actConfirmYes keys.Action = "menu.confirm_delete"
 
 	actReroll keys.Action = "settings.reroll"
 
 	actLayoutSave keys.Action = "layout.save"
+	actLayoutSlim keys.Action = "layout.slim"
 )
 
 func toggleBinding(action keys.Action, label string) keys.Binding {
@@ -160,8 +160,9 @@ func layoutEditorKeymap() *keys.Map {
 		sc.Binding(keys.Left).WithLabel("change"),
 		sc.Binding(keys.Right),
 		sc.Binding(keys.Confirm).WithLabel("toggle panel"),
-		sc.Binding(keys.Inc).WithLabel("reorder"),
+		sc.Binding(keys.Inc).WithGlyph("[ / ]").WithLabel("move panel"),
 		sc.Binding(keys.Dec),
+		keys.Binding{Keys: []string{"s"}, Action: actLayoutSlim, Glyph: "s", Label: "slim"},
 		keys.Binding{Keys: []string{"w"}, Action: actLayoutSave, Glyph: "w", Label: "save"},
 	)
 }
@@ -176,9 +177,12 @@ func menuRenameKeymap() *keys.Map {
 }
 
 func menuDeleteKeymap() *keys.Map {
+	sc := keys.Cur()
 	return keys.NewMap(
-		keys.Binding{Keys: []string{"y", "Y"}, Action: actConfirmYes, Glyph: "y", Label: "delete"},
+		keys.Binding{Keys: []string{"y", "Y", "enter"}, Action: keys.Confirm, Glyph: "y", Label: "delete"},
 		keys.Binding{Keys: []string{"n", "N", "esc", "q", "ctrl+c"}, Action: keys.Cancel, Glyph: "n/esc/q", Label: "cancel"},
+		sc.Binding(keys.Left),
+		sc.Binding(keys.Right),
 	)
 }
 

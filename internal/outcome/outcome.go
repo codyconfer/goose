@@ -3,8 +3,9 @@ package outcome
 import (
 	"math/rand"
 
+	"github.com/codyconfer/viewkit/notify"
+
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/notify"
 )
 
 type Outcome struct {

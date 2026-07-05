@@ -27,7 +27,7 @@ func testRegistry() *Registry[testCtx] {
 func TestBuildScreenMatchesHandBuilt(t *testing.T) {
 	r := testRegistry()
 	spec := ScreenSpec{
-		Layout: "flex",
+		Layout: "flex-columns",
 		Panes:  []PaneRef{{Key: "status"}, {Key: "feed"}},
 	}
 	scr, err := BuildScreen(spec, testCtx{}, r)
@@ -37,7 +37,7 @@ func TestBuildScreenMatchesHandBuilt(t *testing.T) {
 	got := scr.Render(Frame{Width: 80, Height: 6}, TierTall, 0)
 
 	want := Screen{
-		Layout: FlexGrid{},
+		Layout: FlexColumns{},
 		Panes:  []Pane{fixedPane("status", false, nil), fixedPane("feed", true, nil)},
 	}.Render(Frame{Width: 80, Height: 6}, TierTall, 0)
 
@@ -132,7 +132,7 @@ func TestBuildScreenRingOrder(t *testing.T) {
 
 func TestScreenSpecJSONRoundTrip(t *testing.T) {
 	spec := ScreenSpec{
-		Layout:       "flex",
+		Layout:       "flex-columns",
 		LayoutParams: Params{"minWidth": 30, "maxCols": 2},
 		Panes:        []PaneRef{{Key: "status"}, {Key: "feed", MinTier: tierPtr(TierMedium)}},
 	}
@@ -144,7 +144,7 @@ func TestScreenSpecJSONRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(blob, &back); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if back.Layout != "flex" || len(back.Panes) != 2 {
+	if back.Layout != "flex-columns" || len(back.Panes) != 2 {
 		t.Fatalf("round-trip lost fields: %+v", back)
 	}
 	if back.LayoutParams.Int("minWidth", 0) != 30 || back.LayoutParams.Int("maxCols", 0) != 2 {
@@ -172,3 +172,43 @@ func TestParamsInt(t *testing.T) {
 }
 
 func tierPtr(t Tier) *Tier { return &t }
+
+func TestBuildScreenAppliesSlim(t *testing.T) {
+	r := testRegistry()
+	spec := ScreenSpec{
+		Layout: "grid",
+		Panes:  []PaneRef{{Key: "status", Slim: true}, {Key: "feed"}},
+	}
+	scr, err := BuildScreen(spec, testCtx{}, r)
+	if err != nil {
+		t.Fatalf("BuildScreen: %v", err)
+	}
+	if !scr.Panes[0].Slim {
+		t.Fatalf("slim flag from PaneRef should land on the pane")
+	}
+	if scr.Panes[1].Slim {
+		t.Fatalf("non-slim ref should leave pane.Slim false")
+	}
+}
+
+func TestScreenSpecSlimJSONRoundTrip(t *testing.T) {
+	spec := ScreenSpec{
+		Layout:       "grid",
+		LayoutParams: Params{"cols": 4, "rows": 4},
+		Panes:        []PaneRef{{Key: "status", Slim: true}, {Key: "feed"}},
+	}
+	blob, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var back ScreenSpec
+	if err := json.Unmarshal(blob, &back); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !back.Panes[0].Slim || back.Panes[1].Slim {
+		t.Fatalf("slim flag lost in round-trip: %+v", back.Panes)
+	}
+	if back.LayoutParams.Int("cols", 0) != 4 || back.LayoutParams.Int("rows", 0) != 4 {
+		t.Fatalf("grid params lost in round-trip: %+v", back.LayoutParams)
+	}
+}
