@@ -72,6 +72,20 @@ var (
 		Series2:  lipgloss.Color("#ae81ff"),
 		Bg:       lipgloss.Color("#272822"),
 	}
+
+	classicPalette = Palette{
+		Accent:   lipgloss.Color("220"),
+		Border:   lipgloss.Color("245"),
+		Muted:    lipgloss.Color("245"),
+		Text:     lipgloss.Color("252"),
+		Selected: lipgloss.Color("220"),
+		Success:  lipgloss.Color("78"),
+		Warning:  lipgloss.Color("208"),
+		Failure:  lipgloss.Color("203"),
+		Info:     lipgloss.Color("141"),
+		Series2:  lipgloss.Color("141"),
+		Bg:       lipgloss.Color(""),
+	}
 )
 
 type registryEntry struct {
@@ -86,6 +100,7 @@ var registry = []registryEntry{
 	{key: "solarized-light", name: "Solarized Light", palette: solarizedLightPalette},
 	{key: "one-dark-vivid", name: "One Dark Vivid", palette: oneDarkVividPalette},
 	{key: "monokai", name: "Monokai", palette: monokaiPalette},
+	{key: "classic", name: "Classic", palette: classicPalette},
 }
 
 func Keys() []string {
