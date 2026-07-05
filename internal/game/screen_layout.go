@@ -69,6 +69,8 @@ type layoutEditorScreen struct {
 	screenIdx int
 	cursor    int
 	specs     map[string]*editSpec
+	themeKeys []string
+	themeIdx  int
 }
 
 func newLayoutEditor(prev screen) *layoutEditorScreen {
@@ -76,7 +78,8 @@ func newLayoutEditor(prev screen) *layoutEditorScreen {
 	for _, id := range configurableScreens {
 		specs[id] = newEditSpec(id)
 	}
-	return &layoutEditorScreen{prev: prev, specs: specs}
+	tk := theme.Keys()
+	return &layoutEditorScreen{prev: prev, specs: specs, themeKeys: tk, themeIdx: currentThemeIndex(tk)}
 }
 
 func newEditSpec(id string) *editSpec {
@@ -141,8 +144,21 @@ func (le *layoutEditorScreen) paramSpecs() []paramSpec {
 	return layoutParamSpecs(le.currentLayoutKey())
 }
 
-func (le *layoutEditorScreen) paneBase() int {
+func (le *layoutEditorScreen) themePos() int {
 	return 2 + len(le.paramSpecs())
+}
+
+func (le *layoutEditorScreen) paneBase() int {
+	return le.themePos() + 1
+}
+
+func (le *layoutEditorScreen) stepTheme(delta int) {
+	if len(le.themeKeys) == 0 {
+		return
+	}
+	le.themeIdx = panels.StepIndex(le.themeIdx, delta, len(le.themeKeys))
+	setTheme(le.themeKeys[le.themeIdx])
+	_ = saveThemeConfig()
 }
 
 func (le *layoutEditorScreen) rowCount() int {
@@ -207,16 +223,18 @@ func (le *layoutEditorScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 }
 
 func (le *layoutEditorScreen) changeRow(delta int) {
-	switch le.cursor {
-	case 0:
+	switch {
+	case le.cursor == 0:
 		le.screenIdx = panels.StepIndex(le.screenIdx, delta, len(configurableScreens))
 		le.cursor = panels.ClampIndex(le.cursor, le.rowCount())
-	case 1:
+	case le.cursor == 1:
 		es := le.current()
 		if len(es.layouts) > 0 {
 			es.layoutIdx = panels.StepIndex(es.layoutIdx, delta, len(es.layouts))
 		}
 		le.cursor = panels.ClampIndex(le.cursor, le.rowCount())
+	case le.cursor == le.themePos():
+		le.stepTheme(delta)
 	default:
 		specs := le.paramSpecs()
 		if pi := le.cursor - 2; pi >= 0 && pi < len(specs) {
@@ -294,6 +312,12 @@ func (le *layoutEditorScreen) view(m *Model) string {
 	for i, ps := range specs {
 		v := le.paramValue(ps)
 		b.WriteString(le.selectorRow(vk, ps.label, paramDisplay(ps, v), le.cursor == 2+i, v > ps.min, v < ps.max))
+		b.WriteString("\n")
+	}
+
+	if len(le.themeKeys) > 0 {
+		tkey := le.themeKeys[panels.ClampIndex(le.themeIdx, len(le.themeKeys))]
+		b.WriteString(le.selectorRow(vk, "Theme", theme.DisplayName(tkey), le.cursor == le.themePos(), le.themeIdx > 0, le.themeIdx < len(le.themeKeys)-1))
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")
