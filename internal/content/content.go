@@ -140,6 +140,10 @@ type textData struct {
 		Panel string `json:"panel"`
 		Empty string `json:"empty"`
 	} `json:"viz"`
+	Clock struct {
+		Panel       string `json:"panel"`
+		BinaryPanel string `json:"binary_panel"`
+	} `json:"clock"`
 	Feed struct {
 		Panel string `json:"panel"`
 	} `json:"feed"`
