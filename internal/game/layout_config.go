@@ -37,7 +37,7 @@ func refs(keys ...string) []layout.PaneRef {
 func defaultSpec(id string) layout.ScreenSpec {
 	switch id {
 	case screenGame:
-		return layout.ScreenSpec{Layout: "single", Panes: refs("capex", "market", "orders", "feed", "activity")}
+		return layout.ScreenSpec{Layout: "single", Panes: refs("capex", "market", "spectrum", "orders", "feed", "activity")}
 	case screenTrade:
 		return layout.ScreenSpec{Layout: "flex-columns", Panes: refs("purse", "chart", "flow", "builder", "queue", "book", "ticket", "positions", "pnl", "roster", "ledger")}
 	}

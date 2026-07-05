@@ -40,6 +40,9 @@ type Model struct {
 	candles     []candle
 	candleBeats int
 
+	vizBins  []float64
+	vizPeaks []float64
+
 	notifs *notify.Queue
 
 	saveID   int64
@@ -62,6 +65,9 @@ func New(s *economy.Machine, ev *events.Machine, offline float64) Model {
 		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
 		screen: &gameScreen{},
 		notifs: notify.NewQueue(notifQueueCap),
+
+		vizBins:  make([]float64, vizBands),
+		vizPeaks: make([]float64, vizBands),
 	}
 	m.setOffline(offline)
 	m.loadPriceChart()
@@ -153,7 +159,6 @@ func (m *Model) syncPageScroll(prev screen) {
 
 func (m *Model) beatFast(dt float64) {
 	if m.econ.TickFreeze(dt) {
-
 		if dt > 0 {
 			m.sellRate *= buyRateSmoothing
 		}
@@ -194,6 +199,7 @@ func (m *Model) beatFast(dt float64) {
 			m.offline = 0
 		}
 	}
+	m.updateViz(dt)
 	m.notifs.Beat()
 }
 

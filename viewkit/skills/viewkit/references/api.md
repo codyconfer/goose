@@ -140,17 +140,26 @@ type Datum struct { Label string; Value float64 }
 type OHLC struct { Open, High, Low, Close float64 }
 type LedgerRow struct { Label string; Delta float64 }
 type ClockOpts struct { TwentyFour, HideSeconds, ShowDate bool }
+type SpectrumOpts struct { Peaks []float64; BarGap, BarWide int }
 
 func Bar(f layout.Frame, title string, data []Datum, width int, fmtNum func(float64) string, empty string) string
 func BarScroll(f layout.Frame, title string, data []Datum, width int, fmtNum func(float64) string, empty string, visible, offset int) string
 func Line(f layout.Frame, title string, series []float64, width, height int, fmtVal func(float64) string, footer ...string) string
 func Candle(f layout.Frame, title string, candles []OHLC, width, height int, fmtVal func(float64) string, footer ...string) string
 func Pie(f layout.Frame, title string, data []Datum, barWidth int, fmtNum func(float64) string, empty string) string
+func Spectrum(f layout.Frame, title string, levels []float64, height int, empty string, opts ...SpectrumOpts) string // vertical EQ; levels/peaks in [0,1]
 func Ledger(f layout.Frame, title string, rows []LedgerRow, unit string, fmtNum func(float64) string, visible, offset int, empty string) string
 func Markdown(f layout.Frame, src string) string
 func MarkdownPanel(f layout.Frame, title, src string) string
 func Clock(f layout.Frame, title string, t time.Time, opts ...ClockOpts) string
 func BinaryClock(f layout.Frame, title string, t time.Time) string
+
+// Matrix rain — stateful; Beat() once per tick, then render.
+type Rain struct{ /* opaque grid + seeded RNG */ }
+func NewRain(width, rows int, seed int64) *Rain
+func (r *Rain) Resize(width, rows int)
+func (r *Rain) Beat()
+func Matrix(f layout.Frame, title string, r *Rain) string
 
 func ProgressBar(frac float64, width int) string
 func Meter(frac float64, width int) string

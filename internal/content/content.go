@@ -136,6 +136,10 @@ type textData struct {
 	Activity struct {
 		Idle string `json:"idle"`
 	} `json:"activity"`
+	Viz struct {
+		Panel string `json:"panel"`
+		Empty string `json:"empty"`
+	} `json:"viz"`
 	Feed struct {
 		Panel string `json:"panel"`
 	} `json:"feed"`

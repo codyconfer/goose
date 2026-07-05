@@ -24,6 +24,10 @@
   "activity": {
     "idle": "… the flock waddles about, disrupting nothing in particular. Anything could happen."
   },
+  "viz": {
+    "panel": "📈 HYPE SPECTRUM",
+    "empty": "silence… even the narrative needs a moment to buffer."
+  },
   "feed": {
     "panel": "📟 TICKER"
   },

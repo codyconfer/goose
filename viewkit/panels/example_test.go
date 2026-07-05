@@ -18,3 +18,21 @@ func ExampleBar() {
 
 	_ = panels.MarkdownPanel(f, "Notes", "- watch supply\n- watch price")
 }
+
+func ExampleSpectrum() {
+	f := layout.NewFrame(40)
+
+	levels := []float64{0.2, 0.6, 0.9, 0.5, 0.3, 0.7}
+	peaks := []float64{0.4, 0.7, 0.95, 0.8, 0.5, 0.9}
+	_ = panels.Spectrum(f, "SPECTRUM", levels, 8, "silent", panels.SpectrumOpts{Peaks: peaks})
+}
+
+func ExampleMatrix() {
+	f := layout.NewFrame(40)
+
+	r := panels.NewRain(f.BodyWidth(), 10, 1)
+	for i := 0; i < 5; i++ {
+		r.Beat()
+	}
+	_ = panels.Matrix(f, "MATRIX", r)
+}

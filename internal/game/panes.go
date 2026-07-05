@@ -69,6 +69,14 @@ func buildGamePanes() *layout.Registry[gamePaneCtx] {
 			Render:  func(f layout.Frame) string { return c.m.renderActivity(cellFrame(f)) },
 		}, true
 	})
+	r.Pane("spectrum", "Hype Spectrum", func(c gamePaneCtx) (layout.Pane, bool) {
+		return layout.Pane{
+			Name:    "spectrum",
+			Title:   "Hype Spectrum",
+			MinTier: layout.TierTall,
+			Render:  func(f layout.Frame) string { return renderSpectrum(c.m, cellFrame(f)) },
+		}, true
+	})
 	return r
 }
 

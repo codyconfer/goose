@@ -2,10 +2,11 @@
 name: viewkit-panels
 description: >-
   Render charts and widgets with viewkit's panels package. Use when calling
-  panels.Bar / Line / Candle / Pie / Ledger / Markdown / Clock, the small widgets
-  Meter / Toggle / Flash / ProgressBar, or the index helpers ClampIndex /
-  MoveIndex / StepIndex. Covers the neutral-struct + formatter-callback data
-  contract and how charts fit a layout.Frame.
+  panels.Bar / Line / Candle / Pie / Spectrum / Ledger / Markdown / Clock, the
+  small widgets Meter / Toggle / Flash / ProgressBar, the animated Matrix rain
+  (panels.Rain / Matrix), or the index helpers ClampIndex / MoveIndex / StepIndex. Covers the
+  neutral-struct + formatter-callback data contract and how charts fit a
+  layout.Frame.
 ---
 
 # viewkit panels (charts & widgets)
@@ -46,6 +47,10 @@ panels.Candle(f, "OHLC", candles, f.Width, 10, fmtVal)
 // Pie / proportion (barWidth — clamp it to something reasonable)
 panels.Pie(f, "Mix", data, min(f.Width, 48), fmtNum, "empty")
 
+// Spectrum analyzer / equalizer (levels & peaks are per-band magnitudes in [0,1])
+panels.Spectrum(f, "EQ", levels, 6, "silent",
+    panels.SpectrumOpts{Peaks: peaks, BarWide: 2, BarGap: 1})
+
 // Ledger table (unit, visible rows, offset, empty msg)
 panels.Ledger(f, "Flows", rows, "🪙", fmtNum, 8, offset, "no rows")
 
@@ -57,6 +62,24 @@ panels.MarkdownPanel(f, "Docs", mdSource)
 panels.Clock(f, "UTC", t, panels.ClockOpts{TwentyFour: true, HideSeconds: true})
 panels.BinaryClock(f, "BIN", t)
 ```
+
+## Animation (matrix rain)
+
+`Rain` is a **stateful** "matrix rain" grid — the animated-state half of a
+state+render pair, exactly like `notify.Queue` + `panels.NotificationToast`. Build
+it once, advance one frame per tick with `Beat()`, and render with `Matrix`:
+
+```go
+r := panels.NewRain(f.BodyWidth(), 10, time.Now().UnixNano()) // width, rows, seed
+r.Beat()                                                      // once per tick
+panels.Matrix(f, "MATRIX", r)                                 // render this frame
+```
+
+Drive `r.Beat()` from your Bubble Tea tick loop — the same place you call
+`notifs.Beat()` — and `r.Resize(f.BodyWidth(), rows)` on `tea.WindowSizeMsg`. Rows
+are explicit (not derived from `Frame.Height`); the panel border adds 2 lines.
+Colors adapt to the active theme (bright head → `Accent`, body → `Can`, tail →
+`Dim`). A fixed seed makes the animation reproducible for tests.
 
 All chart renderers show the empty-state string (or degrade gracefully) when data
 is missing — pass a sensible `empty` message rather than pre-checking length.
