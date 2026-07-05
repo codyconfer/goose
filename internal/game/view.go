@@ -14,7 +14,6 @@ import (
 
 	"github.com/codyconfer/goose/internal/content"
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/notify"
 )
 
 func (m Model) View() string {
@@ -180,24 +179,7 @@ func (m Model) renderNotification() string {
 	if !ok {
 		return ""
 	}
-	return notificationCard(n.Title, n.Message, n.Tone, m.frame().Width)
-}
-
-func notificationCard(title, message string, tone notify.Tone, width int) string {
-	sty := theme.NotifNeutralSty
-	switch tone {
-	case notify.TonePositive:
-		sty = theme.NotifPositiveSty
-	case notify.ToneWarning:
-		sty = theme.NotifWarningSty
-	case notify.ToneNegative:
-		sty = theme.NotifNegativeSty
-	}
-	body := lipgloss.JoinVertical(lipgloss.Left,
-		lipgloss.NewStyle().Bold(true).Render(title),
-		lipgloss.NewStyle().Width(width).Render(message),
-	)
-	return sty.Render(body)
+	return panels.NotificationCard(m.frame(), n)
 }
 
 func (m Model) heightTier() layout.Tier { return layout.TierForHeight(m.height) }

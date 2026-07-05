@@ -4,7 +4,7 @@ import "github.com/codyconfer/viewkit/theme"
 
 const (
 	DefaultFlexMinWidth = 40
-	DefaultFlexMaxCols  = 3
+	DefaultFlexMaxCols  = 4
 )
 
 func FlexColumns(width, minWidth, maxCols int) int {

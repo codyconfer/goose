@@ -93,7 +93,7 @@ func TestFlexGridNeverExceedsPaneCount(t *testing.T) {
 		Layout: FlexGrid{MinWidth: 40, MaxCols: 3},
 		Panes:  []Pane{flexBoxPane("solo")},
 	}
-	out := scr.Render(NewFrame(200), TierTall, 0) // width wants 3 cols, but only 1 pane
+	out := scr.Render(NewFrame(200), TierTall, 0)
 	if topBorderCount(out) != 1 {
 		t.Fatalf("single pane must occupy 1 column even on a wide screen:\n%s", out)
 	}
@@ -112,11 +112,20 @@ func TestFlexGridStacksAllPanesWhenSingleColumn(t *testing.T) {
 			flexBoxPane("beta"),
 		},
 	}
-	out := scr.Render(NewFrame(50), TierTall, 0) // 1 column
+	out := scr.Render(NewFrame(50), TierTall, 0)
 	if !strings.Contains(out, "alpha") || !strings.Contains(out, "beta") {
 		t.Fatalf("single-column flex should stack all panes:\n%s", out)
 	}
 	if topBorderCount(out) != 1 {
 		t.Fatalf("expected 1 column at width 50:\n%s", out)
+	}
+}
+
+func TestFlexDefaultAllowsFourColumns(t *testing.T) {
+	if got := FlexColumns(160, 0, 0); got != 4 {
+		t.Fatalf("FlexColumns(160,0,0) = %d, want 4 with default max 4", got)
+	}
+	if got := FlexColumns(400, 0, 0); got != 4 {
+		t.Fatalf("FlexColumns(400,0,0) = %d, want 4 (capped)", got)
 	}
 }

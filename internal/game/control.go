@@ -3,8 +3,9 @@ package game
 import (
 	"fmt"
 
+	"github.com/codyconfer/viewkit/notify"
+
 	"github.com/codyconfer/goose/internal/control"
-	"github.com/codyconfer/goose/internal/notify"
 )
 
 type ControlMsg control.Message

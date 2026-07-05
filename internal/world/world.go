@@ -6,8 +6,9 @@ import (
 	"math/rand"
 	"text/template"
 
+	"github.com/codyconfer/viewkit/notify"
+
 	"github.com/codyconfer/goose/internal/economy"
-	"github.com/codyconfer/goose/internal/notify"
 	out "github.com/codyconfer/goose/internal/outcome"
 )
 
@@ -357,8 +358,6 @@ func evalExpr(expr Expr, env evalEnv) float64 {
 		if len(expr.Args) == 0 {
 			return 0
 		}
-		// Outcome costs are allowed to exceed the balance and push tokens
-		// negative; we only guard against a negative charge.
 		cost := evalExpr(expr.Args[0], env)
 		if cost < 0 {
 			return 0

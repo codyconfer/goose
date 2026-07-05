@@ -62,7 +62,6 @@ func TestGridTilesTwoColumnsGapFree(t *testing.T) {
 }
 
 func TestGridEdgeTilingHasNoOddWidthGap(t *testing.T) {
-	// width 81 over 3 columns is not divisible; edges must still tile exactly.
 	cells := []gridCell{{x: 0, w: 1}, {x: 1, w: 1}, {x: 2, w: 1}}
 	total := 0
 	prevEnd := 0
@@ -80,7 +79,6 @@ func TestGridEdgeTilingHasNoOddWidthGap(t *testing.T) {
 }
 
 func TestGridRowSpanStacksVertically(t *testing.T) {
-	// A pane spanning both rows in col 0; two stacked panes in col 1.
 	scr := Screen{
 		Layout: Grid{Cols: 2},
 		Panes: []Pane{
@@ -114,7 +112,6 @@ func TestGridAutoFlowFillsFreeCells(t *testing.T) {
 		},
 	}
 	out := scr.Render(Frame{Width: 40, Height: 2}, TierTall, 0)
-	// a,b flow into row 0 (col 0,1); c flows into row 1 col 0.
 	if !strings.Contains(lineAt(out, 0), "a") || !strings.Contains(lineAt(out, 0), "b") {
 		t.Fatalf("a and b should auto-flow into row 0:\n%s", out)
 	}
@@ -155,7 +152,7 @@ func TestGridFallsBackToStackWithoutHeight(t *testing.T) {
 			fixedPane("b", false, &GridPos{Col: 1}),
 		},
 	}
-	out := scr.Render(NewFrame(40), TierTall, 0) // Height 0 -> stack fallback
+	out := scr.Render(NewFrame(40), TierTall, 0)
 	if !strings.Contains(out, "a") || !strings.Contains(out, "b") {
 		t.Fatalf("fallback should still render both panes:\n%s", out)
 	}
@@ -221,5 +218,59 @@ func TestFitBlockClipsAndPads(t *testing.T) {
 	}
 	if lines[2] != "    " {
 		t.Fatalf("line 2 = %q, want 4 spaces (blank row)", lines[2])
+	}
+}
+
+func TestGridSlimNarrowsAndDonates(t *testing.T) {
+	scr := Screen{
+		Layout: Grid{Cols: 2},
+		Panes: []Pane{
+			func() Pane { p := fixedPane("slim", false, &GridPos{Col: 0, Row: 0}); p.Slim = true; return p }(),
+			fixedPane("wide", false, &GridPos{Col: 1, Row: 0}),
+		},
+	}
+	out := scr.Render(Frame{Width: 80, Height: 1}, TierTall, 0)
+	row := lineAt(out, 0)
+	if w := ansiWidth(row); w != 80 {
+		t.Fatalf("slim row width = %d, want gap-free 80:\n%q", w, row)
+	}
+	wideStart := strings.Index(row, "wide")
+	if wideStart < 0 {
+		t.Fatalf("wide pane missing:\n%q", row)
+	}
+	if wideStart >= 40 {
+		t.Fatalf("slim pane did not narrow: wide starts at %d, want < 40:\n%q", wideStart, row)
+	}
+	if wideStart < 20 {
+		t.Fatalf("slim pane shrank past the 20-col floor: wide starts at %d:\n%q", wideStart, row)
+	}
+}
+
+func TestGridSlimFloorAt20(t *testing.T) {
+	if got := slimWidth(40); got != 20 {
+		t.Fatalf("slimWidth(40) = %d, want 20", got)
+	}
+	if got := slimWidth(30); got != 20 {
+		t.Fatalf("slimWidth(30) = %d, want 20 (floored)", got)
+	}
+	if got := slimWidth(50); got != 25 {
+		t.Fatalf("slimWidth(50) = %d, want 25 (half)", got)
+	}
+	if got := slimWidth(16); got != 16 {
+		t.Fatalf("slimWidth(16) = %d, want 16 (already narrower than floor)", got)
+	}
+}
+
+func TestGridSoleAutoPaneFillsWidth(t *testing.T) {
+	scr := Screen{
+		Layout: Grid{Cols: 2},
+		Panes: []Pane{
+			fixedPane("a", false, &GridPos{Col: 0, Row: 0, ColSpan: 2}),
+			fixedPane("b", false, nil),
+		},
+	}
+	out := scr.Render(Frame{Width: 60, Height: 2}, TierTall, 0)
+	if w := ansiWidth(lineAt(out, 1)); w != 60 {
+		t.Fatalf("sole auto pane row width = %d, want 60:\n%s", w, out)
 	}
 }

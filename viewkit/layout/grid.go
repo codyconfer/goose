@@ -21,6 +21,8 @@ type Grid struct {
 	Rows int
 }
 
+const SlimMinWidth = 20
+
 type gridCell struct {
 	x, y, w, h int
 }
@@ -50,10 +52,16 @@ func (g Grid) Arrange(f Frame, tier Tier, panes []Pane, focusedName string) stri
 	}
 	cells, cols, rows := g.place(visible)
 	rects := make([]rect, len(visible))
+	slim := make([]bool, len(visible))
+	for i, p := range visible {
+		rects[i] = pixelRect(cells[i], cols, rows, width, height)
+		slim[i] = p.Slim
+	}
+	applySlim(cells, slim, rects)
+
 	blocks := make([]string, len(visible))
 	for i, p := range visible {
-		r := pixelRect(cells[i], cols, rows, width, height)
-		rects[i] = r
+		r := rects[i]
 		pf := Frame{Width: r.w, Height: r.h}
 		if p.Interactive && p.Name != "" && p.Name == focusedName {
 			pf.Focused = true
@@ -87,6 +95,15 @@ func (g Grid) place(panes []Pane) (cells []gridCell, cols, rows int) {
 		cells[i] = c
 		occupy(occupied, c)
 	}
+	for i := range panes {
+		if panes[i].Pos != nil || cells[i].w >= cols {
+			continue
+		}
+		if soleInRows(cells, i) {
+			cells[i].x = 0
+			cells[i].w = cols
+		}
+	}
 	rows = g.Rows
 	for _, c := range cells {
 		if c.y+c.h > rows {
@@ -97,6 +114,67 @@ func (g Grid) place(panes []Pane) (cells []gridCell, cols, rows int) {
 		rows = 1
 	}
 	return cells, cols, rows
+}
+
+func soleInRows(cells []gridCell, i int) bool {
+	for j := range cells {
+		if j == i {
+			continue
+		}
+		if cells[j].y < cells[i].y+cells[i].h && cells[i].y < cells[j].y+cells[j].h {
+			return false
+		}
+	}
+	return true
+}
+
+func applySlim(cells []gridCell, slim []bool, rects []rect) {
+	byRow := map[int][]int{}
+	for i := range cells {
+		byRow[cells[i].y] = append(byRow[cells[i].y], i)
+	}
+	for _, idxs := range byRow {
+		var freed, stdBase, totalW int
+		hasSlim := false
+		for _, i := range idxs {
+			totalW += rects[i].w
+			if slim[i] {
+				hasSlim = true
+				freed += rects[i].w - slimWidth(rects[i].w)
+			} else {
+				stdBase += rects[i].w
+			}
+		}
+		if !hasSlim || stdBase == 0 {
+			continue
+		}
+
+		sort.SliceStable(idxs, func(a, b int) bool { return rects[idxs[a]].x < rects[idxs[b]].x })
+		rightEdge := rects[idxs[0]].x + totalW
+		x := rects[idxs[0]].x
+		for n, i := range idxs {
+			w := slimWidth(rects[i].w)
+			if !slim[i] {
+				w = rects[i].w + freed*rects[i].w/stdBase
+			}
+			if n == len(idxs)-1 {
+				w = rightEdge - x
+			}
+			rects[i].x = x
+			rects[i].w = w
+			x += w
+		}
+	}
+}
+
+func slimWidth(w int) int {
+	if half := w / 2; half >= SlimMinWidth {
+		return half
+	}
+	if w < SlimMinWidth {
+		return w
+	}
+	return SlimMinWidth
 }
 
 func cellFor(p GridPos, cols int) gridCell {

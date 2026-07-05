@@ -43,7 +43,7 @@ func TestDefaultLayoutShowsLedger(t *testing.T) {
 
 func TestLayoutEditorToggleHidesPaneAndPersists(t *testing.T) {
 	isolateHome(t)
-	loadLayoutConfig() // reset in-memory config for this temp HOME
+	loadLayoutConfig()
 
 	le := newLayoutEditor(&menuScreen{})
 	es := le.specs[screenTrade]
@@ -65,7 +65,6 @@ func TestLayoutEditorToggleHidesPaneAndPersists(t *testing.T) {
 		t.Fatal("ledger should be removed from the in-memory trade spec")
 	}
 
-	// Reload from disk to prove persistence.
 	loadLayoutConfig()
 	if specHasPane(layoutSpec(screenTrade), "ledger") {
 		t.Fatal("ledger should stay removed after reload from disk")
@@ -81,14 +80,14 @@ func TestLayoutEditorReorderMovesPane(t *testing.T) {
 	loadLayoutConfig()
 
 	le := newLayoutEditor(&menuScreen{})
-	le.screenIdx = 1 // trade
+	le.screenIdx = 1
 	if configurableScreens[le.screenIdx] != screenTrade {
 		t.Fatalf("expected trade at index 1, got %q", configurableScreens[le.screenIdx])
 	}
-	le.cursor = 2 // first pane row
+	le.cursor = 2
 	first := le.current().panes[0].key
 	second := le.current().panes[1].key
-	le.reorder(1) // move first pane down
+	le.reorder(1)
 
 	if le.current().panes[0].key != second || le.current().panes[1].key != first {
 		t.Fatalf("reorder did not swap first two panes: %v", le.current().panes)
@@ -103,10 +102,9 @@ func TestLayoutEditorChangeLayoutPersists(t *testing.T) {
 	loadLayoutConfig()
 
 	le := newLayoutEditor(&menuScreen{})
-	le.screenIdx = 1 // trade
-	le.cursor = 1    // layout row
+	le.screenIdx = 1
+	le.cursor = 1
 	es := le.current()
-	// force a known non-default layout key
 	es.layoutIdx = layoutIndex(es.layouts, "single")
 	if err := le.apply(); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -154,5 +152,88 @@ func TestGameHotkeyOpensLayoutEditor(t *testing.T) {
 	m = send(m, key("esc"))
 	if _, ok := m.screen.(*gameScreen); !ok {
 		t.Fatalf("esc should return to the game screen, got %T", m.screen)
+	}
+}
+
+func TestLayoutEditorShowsReorderAffordance(t *testing.T) {
+	isolateHome(t)
+	loadLayoutConfig()
+
+	le := newLayoutEditor(&menuScreen{})
+	le.screenIdx = 1
+	m := New(economy.NewMachine(), events.NewMachine(), 0)
+	m.width = theme.MinScreenWidth
+	m.height = 120
+	m.screen = le
+
+	if v := le.view(&m); strings.Contains(v, "move panel") {
+		t.Fatalf("reorder hint should not show on the screen-selector row:\n%s", v)
+	}
+
+	le.cursor = 3
+	v := le.view(&m)
+	if !strings.Contains(v, "move panel") {
+		t.Fatalf("panel row should show the 'move panel' hint:\n%s", v)
+	}
+	if !strings.Contains(v, "▾") || !strings.Contains(v, "▴") {
+		t.Fatalf("a middle panel row should show both up and down arrows:\n%s", v)
+	}
+
+	le.cursor = 2
+	v = le.view(&m)
+	if strings.Contains(v, "▴") {
+		t.Fatalf("the first panel row should not offer a move-up arrow:\n%s", v)
+	}
+	if !strings.Contains(v, "▾") {
+		t.Fatalf("the first panel row should still offer a move-down arrow:\n%s", v)
+	}
+}
+
+func TestLayoutEditorGridParamsAndSlimPersist(t *testing.T) {
+	isolateHome(t)
+	loadLayoutConfig()
+
+	le := newLayoutEditor(&menuScreen{})
+	le.screenIdx = 1
+	es := le.current()
+
+	es.layoutIdx = layoutIndex(es.layouts, "grid")
+	if le.currentLayoutKey() != "grid" {
+		t.Fatalf("expected grid layout, got %q", le.currentLayoutKey())
+	}
+
+	specs := le.paramSpecs()
+	if len(specs) != 2 || specs[0].key != "cols" || specs[1].key != "rows" {
+		t.Fatalf("grid should expose cols+rows params, got %+v", specs)
+	}
+
+	le.cursor = 2
+	for i := 0; i < 10; i++ {
+		le.changeRow(1)
+	}
+	if got := le.paramValue(specs[0]); got != 4 {
+		t.Fatalf("cols should clamp to 4, got %d", got)
+	}
+
+	le.cursor = le.paneBase()
+	if _, ok := le.paneIndex(); !ok {
+		t.Fatal("expected a panel row at paneBase")
+	}
+	le.current().panes[0].slim = true
+
+	if err := le.apply(); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	loadLayoutConfig()
+	spec := layoutSpec(screenTrade)
+	if spec.Layout != "grid" {
+		t.Fatalf("layout should persist as grid, got %q", spec.Layout)
+	}
+	if spec.LayoutParams.Int("cols", 0) != 4 {
+		t.Fatalf("cols should persist as 4, got %d", spec.LayoutParams.Int("cols", 0))
+	}
+	if len(spec.Panes) == 0 || !spec.Panes[0].Slim {
+		t.Fatalf("first panel should persist as slim: %+v", spec.Panes)
 	}
 }
