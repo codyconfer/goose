@@ -1,4 +1,0 @@
-interface:
-  display_name: "Viewkit Screen"
-  short_description: "Build viewkit screens and input loops"
-  default_prompt: "Use $viewkit-screen to build a viewkit screen, key loop, and render path."

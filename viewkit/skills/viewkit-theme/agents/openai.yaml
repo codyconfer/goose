@@ -1,4 +1,0 @@
-interface:
-  display_name: "Viewkit Theme"
-  short_description: "Work with viewkit themes and palettes"
-  default_prompt: "Use $viewkit-theme to change palettes, theme globals, or screen background rendering."
