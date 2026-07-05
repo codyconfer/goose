@@ -31,7 +31,7 @@ func TestFlexSectionsGroupsWithHeaders(t *testing.T) {
 	if spot > deriv {
 		t.Fatalf("section order not preserved (SPOTDESK should lead):\n%s", out)
 	}
-	if a, c := strings.Index(out, "alpha"), strings.Index(out, "charlie"); !(spot < a && a < deriv && deriv < c) {
+	if a, c := strings.Index(out, "alpha"), strings.Index(out, "charlie"); spot >= a || a >= deriv || deriv >= c {
 		t.Fatalf("panes not grouped under their headers:\n%s", out)
 	}
 }

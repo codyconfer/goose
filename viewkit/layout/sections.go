@@ -38,7 +38,7 @@ func (g FlexSections) Arrange(f Frame, tier Tier, panes []Pane, focusedName stri
 		groups[p.Group] = append(groups[p.Group], p)
 	}
 
-	inner := FlexColumns{MinWidth: g.MinWidth, MaxCols: g.MaxCols}
+	inner := FlexColumns(g)
 	blocks := make([]string, 0, len(order))
 	for _, name := range order {
 		body := inner.Arrange(f, tier, groups[name], focusedName)
