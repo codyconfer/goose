@@ -55,6 +55,7 @@ func (r TierRows) At(t Tier) int
 ```go
 type Pane struct {
     Name, Title string
+    Group       string      // section label; only the "sections" layout uses it
     Interactive bool        // joins the focus ring
     MinTier     Tier        // hidden when terminal too short
     Pos         *GridPos    // only for Grid layout
@@ -73,6 +74,7 @@ type Grid struct { Cols, Rows int }              // explicit tiled grid
 type GridPos struct { Col, Row, ColSpan, RowSpan int }
 type FlexColumns struct { MinWidth, MaxCols int }// responsive column masonry
 type FlexRows struct { MinWidth, MaxCols int }   // responsive row flow
+type FlexSections struct { MinWidth, MaxCols int }// panes grouped by Pane.Group under labeled headers, each group flows as flex-columns
 func FlexColCount(width, minWidth, maxCols int) int
 const ( DefaultFlexMinWidth = 40; DefaultFlexMaxCols = 4 )
 ```
@@ -94,7 +96,7 @@ type LayoutFactory func(params Params) (Layout, error)
 type PaneInfo struct { Key, Title string }
 
 type Registry[Ctx any]
-func NewRegistry[Ctx any]() *Registry[Ctx]  // pre-registers: single, flex-columns, flex-rows, grid
+func NewRegistry[Ctx any]() *Registry[Ctx]  // pre-registers: single, flex-columns, flex-rows, grid, sections
 func (r *Registry[Ctx]) Pane(key, title string, f PaneFactory[Ctx]) *Registry[Ctx]
 func (r *Registry[Ctx]) LayoutFn(key string, f LayoutFactory) *Registry[Ctx]
 func (r *Registry[Ctx]) PaneKeys() []PaneInfo

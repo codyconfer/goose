@@ -222,6 +222,11 @@ type textData struct {
 		FlowLaying               string `json:"flow_laying"`
 		FlowSelling              string `json:"flow_selling"`
 		FlowDemand               string `json:"flow_demand"`
+		SpotSection              string `json:"spot_section"`
+		DerivSection             string `json:"deriv_section"`
+		AgentsSection            string `json:"agents_section"`
+		TapeSection              string `json:"tape_section"`
+		LedgerSection            string `json:"ledger_section"`
 	} `json:"trade"`
 	Spec struct {
 		DeskTitle       string `json:"desk_title"`

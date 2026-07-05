@@ -3,6 +3,7 @@ package layout
 type Pane struct {
 	Name        string
 	Title       string
+	Group       string
 	Interactive bool
 	MinTier     Tier
 	Pos         *GridPos

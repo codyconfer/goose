@@ -39,6 +39,7 @@ var layoutTitles = map[string]string{
 	"flex-columns": "Flex Columns",
 	"flex-rows":    "Flex Rows",
 	"grid":         "Grid",
+	"sections":     "Sections",
 }
 
 func layoutDisplayName(key string) string {
@@ -55,7 +56,7 @@ func layoutParamSpecs(layoutKey string) []paramSpec {
 			{key: "cols", label: "Columns", min: 1, max: 4, def: 2},
 			{key: "rows", label: "Rows", min: 0, max: 4, def: 0},
 		}
-	case "flex-columns", "flex-rows":
+	case "flex-columns", "flex-rows", "sections":
 		return []paramSpec{
 			{key: "minWidth", label: "Min Track Width", min: 20, max: 80, def: layout.DefaultFlexMinWidth},
 			{key: "maxCols", label: "Max Tracks", min: 1, max: 4, def: layout.DefaultFlexMaxCols},

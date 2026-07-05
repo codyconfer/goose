@@ -92,7 +92,7 @@ Default spec (reference: `internal/game/layout_config.go`):
 ```go
 func defaultSpec(id string) layout.ScreenSpec {
     return layout.ScreenSpec{
-        Layout: "single",             // or "flex-columns" / "flex-rows" / "grid"
+        Layout: "single",             // or "flex-columns" / "flex-rows" / "grid" / "sections"
         Panes: []layout.PaneRef{
             {Key: "status"},          // ← the new pane's key MUST appear here
         },
