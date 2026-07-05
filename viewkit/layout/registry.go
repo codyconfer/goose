@@ -25,8 +25,14 @@ func NewRegistry[Ctx any]() *Registry[Ctx] {
 		layouts:  map[string]LayoutFactory{},
 	}
 	r.LayoutFn("single", func(Params) (Layout, error) { return SingleColumn{}, nil })
-	r.LayoutFn("flex", func(p Params) (Layout, error) {
-		return FlexGrid{
+	r.LayoutFn("flex-columns", func(p Params) (Layout, error) {
+		return FlexColumns{
+			MinWidth: p.Int("minWidth", DefaultFlexMinWidth),
+			MaxCols:  p.Int("maxCols", DefaultFlexMaxCols),
+		}, nil
+	})
+	r.LayoutFn("flex-rows", func(p Params) (Layout, error) {
+		return FlexRows{
 			MinWidth: p.Int("minWidth", DefaultFlexMinWidth),
 			MaxCols:  p.Int("maxCols", DefaultFlexMaxCols),
 		}, nil

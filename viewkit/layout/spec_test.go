@@ -27,7 +27,7 @@ func testRegistry() *Registry[testCtx] {
 func TestBuildScreenMatchesHandBuilt(t *testing.T) {
 	r := testRegistry()
 	spec := ScreenSpec{
-		Layout: "flex",
+		Layout: "flex-columns",
 		Panes:  []PaneRef{{Key: "status"}, {Key: "feed"}},
 	}
 	scr, err := BuildScreen(spec, testCtx{}, r)
@@ -37,7 +37,7 @@ func TestBuildScreenMatchesHandBuilt(t *testing.T) {
 	got := scr.Render(Frame{Width: 80, Height: 6}, TierTall, 0)
 
 	want := Screen{
-		Layout: FlexGrid{},
+		Layout: FlexColumns{},
 		Panes:  []Pane{fixedPane("status", false, nil), fixedPane("feed", true, nil)},
 	}.Render(Frame{Width: 80, Height: 6}, TierTall, 0)
 
@@ -132,7 +132,7 @@ func TestBuildScreenRingOrder(t *testing.T) {
 
 func TestScreenSpecJSONRoundTrip(t *testing.T) {
 	spec := ScreenSpec{
-		Layout:       "flex",
+		Layout:       "flex-columns",
 		LayoutParams: Params{"minWidth": 30, "maxCols": 2},
 		Panes:        []PaneRef{{Key: "status"}, {Key: "feed", MinTier: tierPtr(TierMedium)}},
 	}
@@ -144,7 +144,7 @@ func TestScreenSpecJSONRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(blob, &back); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if back.Layout != "flex" || len(back.Panes) != 2 {
+	if back.Layout != "flex-columns" || len(back.Panes) != 2 {
 		t.Fatalf("round-trip lost fields: %+v", back)
 	}
 	if back.LayoutParams.Int("minWidth", 0) != 30 || back.LayoutParams.Int("maxCols", 0) != 2 {

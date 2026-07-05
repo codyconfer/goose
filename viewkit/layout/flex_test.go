@@ -15,14 +15,14 @@ func TestFlexColumnsBreakpoints(t *testing.T) {
 		{79, 1}, {60, 1}, {40, 1}, {39, 1}, {1, 1},
 	}
 	for _, c := range cases {
-		if got := FlexColumns(c.width, 40, 3); got != c.want {
-			t.Errorf("FlexColumns(%d, 40, 3) = %d, want %d", c.width, got, c.want)
+		if got := FlexColCount(c.width, 40, 3); got != c.want {
+			t.Errorf("FlexColCount(%d, 40, 3) = %d, want %d", c.width, got, c.want)
 		}
 	}
 }
 
 func TestFlexColumnsDefaults(t *testing.T) {
-	if got := FlexColumns(120, 0, 0); got != 3 {
+	if got := FlexColCount(120, 0, 0); got != 3 {
 		t.Fatalf("FlexColumns with zero opts = %d, want 3 (defaults 40/3)", got)
 	}
 }
@@ -46,7 +46,7 @@ func topBorderCount(out string) int {
 
 func TestFlexGridReactiveColumnCount(t *testing.T) {
 	scr := Screen{
-		Layout: FlexGrid{MinWidth: 40, MaxCols: 3},
+		Layout: FlexColumns{MinWidth: 40, MaxCols: 3},
 		Panes: []Pane{
 			flexBoxPane("one"),
 			flexBoxPane("two"),
@@ -76,7 +76,7 @@ func TestFlexGridReactiveColumnCount(t *testing.T) {
 
 func TestFlexGridReflowDemo(t *testing.T) {
 	scr := Screen{
-		Layout: FlexGrid{MinWidth: 40, MaxCols: 3},
+		Layout: FlexColumns{MinWidth: 40, MaxCols: 3},
 		Panes: []Pane{
 			{Name: "status", Render: func(f Frame) string { return f.CellBox("STATUS", "tokens 1.2M", "Lv.7") }},
 			{Name: "market", Render: func(f Frame) string { return f.CellBox("MARKET", "price 12.4", "trend up") }},
@@ -84,13 +84,13 @@ func TestFlexGridReflowDemo(t *testing.T) {
 		},
 	}
 	for _, w := range []int{126, 100, 60} {
-		t.Logf("\n--- width %d (%d cols) ---\n%s", w, FlexColumns(w, 40, 3), scr.Render(NewFrame(w), TierTall, 0))
+		t.Logf("\n--- width %d (%d cols) ---\n%s", w, FlexColCount(w, 40, 3), scr.Render(NewFrame(w), TierTall, 0))
 	}
 }
 
 func TestFlexGridNeverExceedsPaneCount(t *testing.T) {
 	scr := Screen{
-		Layout: FlexGrid{MinWidth: 40, MaxCols: 3},
+		Layout: FlexColumns{MinWidth: 40, MaxCols: 3},
 		Panes:  []Pane{flexBoxPane("solo")},
 	}
 	out := scr.Render(NewFrame(200), TierTall, 0)
@@ -106,7 +106,7 @@ func TestFlexGridNeverExceedsPaneCount(t *testing.T) {
 
 func TestFlexGridStacksAllPanesWhenSingleColumn(t *testing.T) {
 	scr := Screen{
-		Layout: FlexGrid{MinWidth: 40, MaxCols: 3},
+		Layout: FlexColumns{MinWidth: 40, MaxCols: 3},
 		Panes: []Pane{
 			flexBoxPane("alpha"),
 			flexBoxPane("beta"),
@@ -121,11 +121,66 @@ func TestFlexGridStacksAllPanesWhenSingleColumn(t *testing.T) {
 	}
 }
 
-func TestFlexDefaultAllowsFourColumns(t *testing.T) {
-	if got := FlexColumns(160, 0, 0); got != 4 {
-		t.Fatalf("FlexColumns(160,0,0) = %d, want 4 with default max 4", got)
+func TestFlexRowsExpandsLoneLastRow(t *testing.T) {
+	scr := Screen{
+		Layout: FlexRows{MinWidth: 40, MaxCols: 2},
+		Panes:  []Pane{flexBoxPane("a"), flexBoxPane("b"), flexBoxPane("c")},
 	}
-	if got := FlexColumns(400, 0, 0); got != 4 {
-		t.Fatalf("FlexColumns(400,0,0) = %d, want 4 (capped)", got)
+	const w = 120
+	out := scr.Render(NewFrame(w), TierTall, 0)
+	lines := strings.Split(out, "\n")
+
+	// Every composited row must be gap-free full width (blank separator
+	// lines between rows come from Stack and are skipped).
+	for _, ln := range lines {
+		if ln == "" {
+			continue
+		}
+		if got := len([]rune(stripANSI(ln))); got != w {
+			t.Fatalf("row width %d, want %d:\n%q", got, w, ln)
+		}
+	}
+
+	// First row holds two boxes side by side; the ragged last row holds one
+	// box that expands to fill the full width.
+	firstTop := stripANSI(lines[0])
+	if strings.Count(firstTop, "╭") != 2 {
+		t.Fatalf("first row should hold two boxes, got: %q", firstTop)
+	}
+	var lastTop string
+	for _, ln := range lines {
+		if s := stripANSI(ln); strings.Contains(s, "╭") {
+			lastTop = s
+		}
+	}
+	if strings.Count(lastTop, "╭") != 1 {
+		t.Fatalf("last row should hold exactly one box, got: %q", lastTop)
+	}
+	if !strings.HasPrefix(lastTop, "╭") || !strings.HasSuffix(lastTop, "╮") {
+		t.Fatalf("lone last-row pane should span full width: %q", lastTop)
+	}
+}
+
+func TestFlexRowsReflowDemo(t *testing.T) {
+	scr := Screen{
+		Layout: FlexRows{MinWidth: 40, MaxCols: 3},
+		Panes: []Pane{
+			{Name: "status", Render: func(f Frame) string { return f.CellBox("STATUS", "tokens 1.2M", "Lv.7") }},
+			{Name: "market", Render: func(f Frame) string { return f.CellBox("MARKET", "price 12.4") }},
+			{Name: "feed", Render: func(f Frame) string { return f.CellBox("FEED", "honk", "sold 50") }},
+			{Name: "orders", Render: func(f Frame) string { return f.CellBox("ORDERS", "buy 10") }},
+		},
+	}
+	for _, w := range []int{126, 100, 60} {
+		t.Logf("\n--- width %d (%d across) ---\n%s", w, FlexColCount(w, 40, 3), scr.Render(NewFrame(w), TierTall, 0))
+	}
+}
+
+func TestFlexDefaultAllowsFourColumns(t *testing.T) {
+	if got := FlexColCount(160, 0, 0); got != 4 {
+		t.Fatalf("FlexColCount(160,0,0) = %d, want 4 with default max 4", got)
+	}
+	if got := FlexColCount(400, 0, 0); got != 4 {
+		t.Fatalf("FlexColCount(400,0,0) = %d, want 4 (capped)", got)
 	}
 }

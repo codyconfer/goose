@@ -154,8 +154,8 @@ func TestAgentFireLandsInFeedNotFlash(t *testing.T) {
 	if m.flash != "" {
 		t.Fatalf("agent fire leaked into flash: %q", m.flash)
 	}
-	if !strings.Contains(m.renderFeed(0, false), content.Text.Feed.Panel) {
-		t.Fatalf("feed panel not rendered: %q", m.renderFeed(0, false))
+	if !strings.Contains(m.renderFeed(m.frame(), 0), content.Text.Feed.Panel) {
+		t.Fatalf("feed panel not rendered: %q", m.renderFeed(m.frame(), 0))
 	}
 }
 
@@ -272,8 +272,8 @@ func TestMenuDeletesSaveCreatedThroughNewGameFlow(t *testing.T) {
 
 	m = send(m, key("x"))
 	ms = m.screen.(*menuScreen)
-	if ms.mode != menuModeDelete {
-		t.Fatalf("menu mode=%v, want delete confirmation", ms.mode)
+	if ms.confirm == nil {
+		t.Fatalf("menu confirm=nil, want delete confirmation")
 	}
 	m = send(m, key("y"))
 

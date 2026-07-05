@@ -103,20 +103,16 @@ func (m Model) renderShutdown() string {
 	return theme.NotifNegativeSty.Render(body)
 }
 
-func (m Model) renderActivity() string {
+func (m Model) renderActivity(vk layout.Frame) string {
 	if m.notifs.Active() {
-		return m.renderNotification()
+		return m.renderNotification(vk)
 	}
-	return theme.NotifIdleSty.Render(lipgloss.NewStyle().Width(m.frame().Width).Render(content.Text.Activity.Idle))
+	return theme.NotifIdleSty.Render(lipgloss.NewStyle().Width(vk.Width).Render(content.Text.Activity.Idle))
 }
 
-func (m Model) renderFeed(offset int, focused bool) string {
+func (m Model) renderFeed(vk layout.Frame, offset int) string {
 	if !m.feed.active() {
 		return ""
-	}
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
 	}
 	raw := m.feed.lines()
 
@@ -131,8 +127,7 @@ func (m Model) feedScrollable() bool {
 	return m.feed.size() > m.panelRows(feedRows)
 }
 
-func (m Model) renderMarket() string {
-	vk := m.frame()
+func (m Model) renderMarket(vk layout.Frame) string {
 	s := m.econ.Get()
 	priceTag := theme.DimSty.Render(content.Text.Market.PriceSteady)
 	switch {
@@ -174,12 +169,12 @@ func (m Model) renderFooter(km *keys.Map, focusVerb string, ringSize int) string
 	return m.frame().HintLine(hints...)
 }
 
-func (m Model) renderNotification() string {
+func (m Model) renderNotification(vk layout.Frame) string {
 	n, ok := m.notifs.Current()
 	if !ok {
 		return ""
 	}
-	return panels.NotificationCard(m.frame(), n)
+	return panels.NotificationCard(vk, n)
 }
 
 func (m Model) heightTier() layout.Tier { return layout.TierForHeight(m.height) }

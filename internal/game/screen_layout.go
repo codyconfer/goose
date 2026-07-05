@@ -34,11 +34,31 @@ type paramSpec struct {
 	def   int
 }
 
+var layoutTitles = map[string]string{
+	"single":       "Single Column",
+	"flex-columns": "Flex Columns",
+	"flex-rows":    "Flex Rows",
+	"grid":         "Grid",
+}
+
+func layoutDisplayName(key string) string {
+	if t, ok := layoutTitles[key]; ok {
+		return t
+	}
+	return key
+}
+
 func layoutParamSpecs(layoutKey string) []paramSpec {
-	if layoutKey == "grid" {
+	switch layoutKey {
+	case "grid":
 		return []paramSpec{
 			{key: "cols", label: "Columns", min: 1, max: 4, def: 2},
 			{key: "rows", label: "Rows", min: 0, max: 4, def: 0},
+		}
+	case "flex-columns", "flex-rows":
+		return []paramSpec{
+			{key: "minWidth", label: "Min Track Width", min: 20, max: 80, def: layout.DefaultFlexMinWidth},
+			{key: "maxCols", label: "Max Tracks", min: 1, max: 4, def: layout.DefaultFlexMaxCols},
 		}
 	}
 	return nil
@@ -267,7 +287,7 @@ func (le *layoutEditorScreen) view(m *Model) string {
 
 	b.WriteString(le.selectorRow(vk, "Screen", screenTitles[id], le.cursor == 0, le.screenIdx > 0, le.screenIdx < len(configurableScreens)-1))
 	b.WriteString("\n")
-	b.WriteString(le.selectorRow(vk, "Layout", le.currentLayoutKey(), le.cursor == 1, es.layoutIdx > 0, es.layoutIdx < len(es.layouts)-1))
+	b.WriteString(le.selectorRow(vk, "Layout", layoutDisplayName(le.currentLayoutKey()), le.cursor == 1, es.layoutIdx > 0, es.layoutIdx < len(es.layouts)-1))
 	b.WriteString("\n")
 
 	specs := le.paramSpecs()

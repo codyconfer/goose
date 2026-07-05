@@ -43,11 +43,11 @@ func defaultSpec(id string) layout.ScreenSpec {
 	case screenGame:
 		return layout.ScreenSpec{Layout: "single", Panes: refs("capex", "market", "orders", "feed", "activity")}
 	case screenTrade:
-		return layout.ScreenSpec{Layout: "flex", Panes: refs("purse", "chart", "flow", "builder", "queue", "ledger")}
+		return layout.ScreenSpec{Layout: "flex-columns", Panes: refs("purse", "chart", "flow", "builder", "queue", "ledger")}
 	case screenSpec:
-		return layout.ScreenSpec{Layout: "flex", Panes: refs("purse", "book", "builder", "positions", "pnl", "ledger")}
+		return layout.ScreenSpec{Layout: "flex-columns", Panes: refs("purse", "book", "builder", "positions", "pnl", "ledger")}
 	case screenAgents:
-		return layout.ScreenSpec{Layout: "flex", Panes: refs("roster")}
+		return layout.ScreenSpec{Layout: "flex-columns", Panes: refs("roster")}
 	}
 	return layout.ScreenSpec{Layout: "single"}
 }

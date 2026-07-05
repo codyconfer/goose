@@ -84,7 +84,8 @@ func TestLayoutEditorReorderMovesPane(t *testing.T) {
 	if configurableScreens[le.screenIdx] != screenTrade {
 		t.Fatalf("expected trade at index 1, got %q", configurableScreens[le.screenIdx])
 	}
-	le.cursor = 2
+	base := le.paneBase()
+	le.cursor = base
 	first := le.current().panes[0].key
 	second := le.current().panes[1].key
 	le.reorder(1)
@@ -92,8 +93,8 @@ func TestLayoutEditorReorderMovesPane(t *testing.T) {
 	if le.current().panes[0].key != second || le.current().panes[1].key != first {
 		t.Fatalf("reorder did not swap first two panes: %v", le.current().panes)
 	}
-	if le.cursor != 3 {
-		t.Fatalf("cursor should follow moved pane to row 3, got %d", le.cursor)
+	if le.cursor != base+1 {
+		t.Fatalf("cursor should follow moved pane to row %d, got %d", base+1, le.cursor)
 	}
 }
 
@@ -170,7 +171,8 @@ func TestLayoutEditorShowsReorderAffordance(t *testing.T) {
 		t.Fatalf("reorder hint should not show on the screen-selector row:\n%s", v)
 	}
 
-	le.cursor = 3
+	base := le.paneBase()
+	le.cursor = base + 1
 	v := le.view(&m)
 	if !strings.Contains(v, "move panel") {
 		t.Fatalf("panel row should show the 'move panel' hint:\n%s", v)
@@ -179,13 +181,70 @@ func TestLayoutEditorShowsReorderAffordance(t *testing.T) {
 		t.Fatalf("a middle panel row should show both up and down arrows:\n%s", v)
 	}
 
-	le.cursor = 2
+	le.cursor = base
 	v = le.view(&m)
 	if strings.Contains(v, "▴") {
 		t.Fatalf("the first panel row should not offer a move-up arrow:\n%s", v)
 	}
 	if !strings.Contains(v, "▾") {
 		t.Fatalf("the first panel row should still offer a move-down arrow:\n%s", v)
+	}
+}
+
+func TestLayoutEditorFlexParamsPersist(t *testing.T) {
+	isolateHome(t)
+	loadLayoutConfig()
+
+	le := newLayoutEditor(&menuScreen{})
+	le.screenIdx = 1
+	es := le.current()
+
+	es.layoutIdx = layoutIndex(es.layouts, "flex-columns")
+	if le.currentLayoutKey() != "flex-columns" {
+		t.Fatalf("expected flex-columns layout, got %q", le.currentLayoutKey())
+	}
+
+	specs := le.paramSpecs()
+	if len(specs) != 2 || specs[0].key != "minWidth" || specs[1].key != "maxCols" {
+		t.Fatalf("flex should expose minWidth+maxCols params, got %+v", specs)
+	}
+
+	// maxCols is the second param row (index 1) → editor row paneBase-relative 2+1.
+	le.cursor = 3
+	for i := 0; i < 10; i++ {
+		le.changeRow(1)
+	}
+	if got := le.paramValue(specs[1]); got != 4 {
+		t.Fatalf("maxCols should clamp to 4, got %d", got)
+	}
+
+	if err := le.apply(); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	loadLayoutConfig()
+	spec := layoutSpec(screenTrade)
+	if spec.Layout != "flex-columns" {
+		t.Fatalf("layout should persist as flex-columns, got %q", spec.Layout)
+	}
+	if spec.LayoutParams.Int("maxCols", 0) != 4 {
+		t.Fatalf("maxCols should persist as 4, got %d", spec.LayoutParams.Int("maxCols", 0))
+	}
+}
+
+func TestLayoutEditorShowsLayoutDisplayName(t *testing.T) {
+	isolateHome(t)
+	loadLayoutConfig()
+
+	le := newLayoutEditor(&menuScreen{})
+	le.screenIdx = 1
+	le.current().layoutIdx = layoutIndex(le.current().layouts, "flex-rows")
+	m := New(economy.NewMachine(), events.NewMachine(), 0)
+	m.width = theme.MinScreenWidth
+	m.height = 120
+
+	if v := le.view(&m); !strings.Contains(v, "Flex Rows") {
+		t.Fatalf("layout selector should show the display name 'Flex Rows':\n%s", v)
 	}
 }
 

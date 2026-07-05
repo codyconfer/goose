@@ -31,10 +31,6 @@ func (gs *gameScreen) focusables(m *Model) layout.Ring {
 	return gs.build(m).Ring()
 }
 
-func static(render func() string) func(layout.Frame) string {
-	return func(layout.Frame) string { return render() }
-}
-
 func (gs *gameScreen) focusedPanel(m *Model) string {
 	return gs.focusables(m).At(gs.focus)
 }
@@ -159,7 +155,7 @@ func (gs *gameScreen) view(m *Model) string {
 	if m.econ.Get().Frozen() {
 		sections = append(sections, m.renderShutdown())
 	}
-	sections = append(sections, gs.build(m).Render(m.frame(), m.heightTier(), gs.focus))
+	sections = append(sections, gs.build(m).Render(m.bodyFrame(), m.heightTier(), gs.focus))
 	sections = append(sections, lipgloss.JoinVertical(lipgloss.Left,
 		m.renderTapper(),
 		m.renderFooter(gs.keys(), gs.focusVerb(m), len(gs.focusables(m))),
@@ -167,11 +163,7 @@ func (gs *gameScreen) view(m *Model) string {
 	return layout.Stack(sections...)
 }
 
-func (gs *gameScreen) renderCapex(m *Model, focused bool) string {
-	vk := m.frame()
-	if focused {
-		vk = vk.Focus()
-	}
+func (gs *gameScreen) renderCapex(m *Model, vk layout.Frame) string {
 	var lines []string
 	selStart, selEnd := 0, 0
 	for i, it := range m.items {
@@ -181,7 +173,7 @@ func (gs *gameScreen) renderCapex(m *Model, focused bool) string {
 		if i == gs.cursor {
 			selStart = len(lines)
 		}
-		lines = append(lines, gs.capexRow(m, i, it))
+		lines = append(lines, gs.capexRow(m, vk, i, it))
 		if i == gs.cursor {
 			lines = append(lines, theme.DimSty.Width(vk.Width-5).MarginLeft(5).Render(it.desc()))
 			selEnd = len(lines) - 1
@@ -196,8 +188,7 @@ func (gs *gameScreen) renderCapex(m *Model, focused bool) string {
 	return vk.ScrollPanel(content.Text.Capex.Panel, lines, rows, gs.capex.Offset)
 }
 
-func (gs *gameScreen) capexRow(m *Model, i int, it capexItem) string {
-	vk := m.frame()
+func (gs *gameScreen) capexRow(m *Model, vk layout.Frame, i int, it capexItem) string {
 	s := m.econ.Get()
 	cost := it.cost(s)
 

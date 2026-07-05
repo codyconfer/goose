@@ -29,7 +29,6 @@ const (
 	actMenuDelete keys.Action = "menu.delete"
 	actMenuSave   keys.Action = "menu.save"
 	actMenuLayout keys.Action = "menu.layout"
-	actConfirmYes keys.Action = "menu.confirm_delete"
 
 	actReroll keys.Action = "settings.reroll"
 
@@ -178,9 +177,12 @@ func menuRenameKeymap() *keys.Map {
 }
 
 func menuDeleteKeymap() *keys.Map {
+	sc := keys.Cur()
 	return keys.NewMap(
-		keys.Binding{Keys: []string{"y", "Y"}, Action: actConfirmYes, Glyph: "y", Label: "delete"},
+		keys.Binding{Keys: []string{"y", "Y", "enter"}, Action: keys.Confirm, Glyph: "y", Label: "delete"},
 		keys.Binding{Keys: []string{"n", "N", "esc", "q", "ctrl+c"}, Action: keys.Cancel, Glyph: "n/esc/q", Label: "cancel"},
+		sc.Binding(keys.Left),
+		sc.Binding(keys.Right),
 	)
 }
 
