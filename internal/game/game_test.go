@@ -432,9 +432,9 @@ func TestViewRendersEveryScreen(t *testing.T) {
 		t.Error("character view missing header")
 	}
 
-	g.screen = &agentsScreen{prev: &gameScreen{}}
-	if !strings.Contains(g.View(), "AGENT DESK") {
-		t.Error("agents view missing header")
+	g.screen = &tradeScreen{prev: &gameScreen{}, kind: economy.TxBuyEggs}
+	if !strings.Contains(g.View(), "AGENT ROSTER") {
+		t.Error("trade desk view missing agent roster")
 	}
 
 	g.quitting = true
@@ -511,15 +511,6 @@ func TestViewRequiresMinimumScreenWidthForExistingScreens(t *testing.T) {
 				return m
 			},
 			hidden: "TRADE DESK",
-		},
-		{
-			name: "spec",
-			build: func() Model {
-				m := New(economy.FromState(leveledState()), events.NewMachine(), 0)
-				m.screen = &specScreen{prev: &gameScreen{}, kind: economy.PosCall}
-				return m
-			},
-			hidden: "DERIVATIVES DESK",
 		},
 		{
 			name: "character",

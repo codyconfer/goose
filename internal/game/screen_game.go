@@ -96,8 +96,6 @@ func (gs *gameScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		gs.openMaxPosition(m, economy.PosPut)
 	case actOpenTrade:
 		m.screen = &tradeScreen{prev: gs, kind: economy.TxBuyEggs}
-	case actOpenAgents:
-		m.screen = &agentsScreen{prev: gs}
 	case actOpenLayout:
 		m.screen = newLayoutEditor(gs)
 	}
@@ -142,12 +140,12 @@ func (gs *gameScreen) openMaxPosition(m *Model, kind economy.PosKind) {
 	if premiumIdx < 0 {
 		premiumIdx = 0
 	}
-	ss := specScreen{
-		kind:        kind,
+	ts := tradeScreen{
+		pos:         kind,
 		premiumIdx:  premiumIdx,
 		leverageIdx: len(specLeverages) - 1,
 	}
-	ss.open(m)
+	ts.open(m)
 }
 
 func (gs *gameScreen) view(m *Model) string {

@@ -12,21 +12,9 @@ type tradePaneCtx struct {
 	ts *tradeScreen
 }
 
-type specPaneCtx struct {
-	m  *Model
-	ss *specScreen
-}
-
-type agentsPaneCtx struct {
-	m  *Model
-	as *agentsScreen
-}
-
 var (
-	gamePanesReg   = buildGamePanes()
-	tradePanesReg  = buildTradePanes()
-	specPanesReg   = buildSpecPanes()
-	agentsPanesReg = buildAgentsPanes()
+	gamePanesReg  = buildGamePanes()
+	tradePanesReg = buildTradePanes()
 )
 
 func buildScreen[C any](id string, ctx C, reg *layout.Registry[C]) layout.Screen {
@@ -102,48 +90,27 @@ func buildTradePanes() *layout.Registry[tradePaneCtx] {
 		s := c.m.econ.Get()
 		return layout.Pane{Name: "queue", Interactive: len(s.Transactions) > 0, Render: func(f layout.Frame) string { return renderTransactions(c.m, cellFrame(f), c.ts.queue) }}, true
 	})
+	r.Pane("book", "Order Book", func(c tradePaneCtx) (layout.Pane, bool) {
+		return layout.Pane{Name: "book", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderBook(c.m, cellFrame(f)) }}, c.ts.specUnlocked(c.m)
+	})
+	r.Pane("ticket", "New Position", func(c tradePaneCtx) (layout.Pane, bool) {
+		return layout.Pane{Name: "ticket", Interactive: true, Render: func(f layout.Frame) string { return c.ts.renderTicket(c.m, cellFrame(f)) }}, c.ts.specUnlocked(c.m)
+	})
+	r.Pane("positions", "Positions", func(c tradePaneCtx) (layout.Pane, bool) {
+		s := c.m.econ.Get()
+		return layout.Pane{Name: "positions", Interactive: len(s.Positions) > 0, Render: func(f layout.Frame) string { return c.ts.renderPositions(c.m, cellFrame(f)) }}, c.ts.specUnlocked(c.m)
+	})
+	r.Pane("pnl", "P&L", func(c tradePaneCtx) (layout.Pane, bool) {
+		s := c.m.econ.Get()
+		return layout.Pane{Name: "pnl", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return c.ts.renderPnL(c.m, cellFrame(f)) }}, c.ts.specUnlocked(c.m) && len(s.Positions) > 0
+	})
+	r.Pane("roster", "Roster", func(c tradePaneCtx) (layout.Pane, bool) {
+		agents := c.m.econ.Get().Agents
+		return layout.Pane{Name: "roster", Interactive: len(agents) > 0, Render: func(f layout.Frame) string { return c.ts.renderRoster(c.m, cellFrame(f), agents) }}, true
+	})
 	r.Pane("ledger", "Ledger", func(c tradePaneCtx) (layout.Pane, bool) {
 		s := c.m.econ.Get()
 		return layout.Pane{Name: "ledger", MinTier: layout.TierMedium, Interactive: len(s.Ledger) > c.m.panelRows(ledgerRows), Render: func(f layout.Frame) string { return renderLedger(c.m, cellFrame(f), c.ts.ledger) }}, true
-	})
-	return r
-}
-
-func buildSpecPanes() *layout.Registry[specPaneCtx] {
-	r := layout.NewRegistry[specPaneCtx]()
-	r.Pane("purse", "Purse", func(c specPaneCtx) (layout.Pane, bool) {
-		return layout.Pane{Name: "purse", Render: func(f layout.Frame) string { return c.ss.renderPurse(c.m, cellFrame(f)) }}, true
-	})
-	r.Pane("book", "Order Book", func(c specPaneCtx) (layout.Pane, bool) {
-		return layout.Pane{Name: "book", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return renderBook(c.m, cellFrame(f)) }}, true
-	})
-	r.Pane("builder", "New Position", func(c specPaneCtx) (layout.Pane, bool) {
-		return layout.Pane{Name: "builder", Interactive: true, Render: func(f layout.Frame) string { return c.ss.renderTicket(c.m, cellFrame(f)) }}, true
-	})
-	r.Pane("positions", "Positions", func(c specPaneCtx) (layout.Pane, bool) {
-		s := c.m.econ.Get()
-		return layout.Pane{Name: "positions", Interactive: len(s.Positions) > 0, Render: func(f layout.Frame) string { return c.ss.renderPositions(c.m, cellFrame(f)) }}, true
-	})
-	r.Pane("pnl", "P&L", func(c specPaneCtx) (layout.Pane, bool) {
-		s := c.m.econ.Get()
-		return layout.Pane{Name: "pnl", MinTier: layout.TierTall, Render: func(f layout.Frame) string { return c.ss.renderPnL(c.m, cellFrame(f)) }}, len(s.Positions) > 0
-	})
-	r.Pane("ledger", "Ledger", func(c specPaneCtx) (layout.Pane, bool) {
-		s := c.m.econ.Get()
-		return layout.Pane{Name: "ledger", MinTier: layout.TierMedium, Interactive: len(s.Ledger) > c.m.panelRows(ledgerRows), Render: func(f layout.Frame) string { return renderLedger(c.m, cellFrame(f), c.ss.ledger) }}, true
-	})
-	return r
-}
-
-func buildAgentsPanes() *layout.Registry[agentsPaneCtx] {
-	r := layout.NewRegistry[agentsPaneCtx]()
-	r.Pane("roster", "Roster", func(c agentsPaneCtx) (layout.Pane, bool) {
-		agents := c.m.econ.Get().Agents
-		return layout.Pane{
-			Name:        "roster",
-			Interactive: len(agents) > 0,
-			Render:      func(f layout.Frame) string { return c.as.renderRoster(c.m, cellFrame(f), agents) },
-		}, true
 	})
 	return r
 }

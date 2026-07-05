@@ -1,8 +1,12 @@
 package game
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/codyconfer/viewkit/layout"
 	"github.com/codyconfer/viewkit/theme"
@@ -229,6 +233,40 @@ func TestLayoutEditorFlexParamsPersist(t *testing.T) {
 	}
 	if spec.LayoutParams.Int("maxCols", 0) != 4 {
 		t.Fatalf("maxCols should persist as 4, got %d", spec.LayoutParams.Int("maxCols", 0))
+	}
+}
+
+func TestLayoutEditorThemePickerSwitchesAndPersists(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	defer theme.Use(theme.Default())
+
+	m := New(economy.NewMachine(), events.NewMachine(), 0)
+	le := newLayoutEditor(&menuScreen{})
+	m.screen = le
+
+	if !strings.Contains(le.view(&m), "Theme") {
+		t.Fatalf("layout editor view missing Theme row:\n%s", le.view(&m))
+	}
+
+	le.cursor = le.themePos()
+	startAccent := theme.Cur().Accent.GetForeground()
+	le.handleKey(&m, tea.KeyMsg{Type: tea.KeyRight})
+
+	if theme.Cur().Accent.GetForeground() == startAccent {
+		t.Fatal("stepping theme did not change the active theme")
+	}
+	wantKey := theme.Keys()[1]
+	if theme.Cur().Accent.GetForeground() != mustAccent(t, wantKey) {
+		t.Fatalf("active theme = %v, want %s", theme.Cur().Accent.GetForeground(), wantKey)
+	}
+
+	data, err := os.ReadFile(filepath.Join(home, ".goose", "theme.json"))
+	if err != nil {
+		t.Fatalf("theme.json not written: %v", err)
+	}
+	if !strings.Contains(string(data), wantKey) {
+		t.Fatalf("theme.json missing %q: %s", wantKey, data)
 	}
 }
 

@@ -9,19 +9,15 @@ import (
 )
 
 const (
-	screenGame   = "game"
-	screenTrade  = "trade"
-	screenSpec   = "spec"
-	screenAgents = "agents"
+	screenGame  = "game"
+	screenTrade = "trade"
 )
 
-var configurableScreens = []string{screenGame, screenTrade, screenSpec, screenAgents}
+var configurableScreens = []string{screenGame, screenTrade}
 
 var screenTitles = map[string]string{
-	screenGame:   "Home",
-	screenTrade:  "Trading Desk",
-	screenSpec:   "Derivatives Desk",
-	screenAgents: "Agents",
+	screenGame:  "Home",
+	screenTrade: "Trade Desk",
 }
 
 type layoutConfig struct {
@@ -43,11 +39,7 @@ func defaultSpec(id string) layout.ScreenSpec {
 	case screenGame:
 		return layout.ScreenSpec{Layout: "single", Panes: refs("capex", "market", "orders", "feed", "activity")}
 	case screenTrade:
-		return layout.ScreenSpec{Layout: "flex-columns", Panes: refs("purse", "chart", "flow", "builder", "queue", "ledger")}
-	case screenSpec:
-		return layout.ScreenSpec{Layout: "flex-columns", Panes: refs("purse", "book", "builder", "positions", "pnl", "ledger")}
-	case screenAgents:
-		return layout.ScreenSpec{Layout: "flex-columns", Panes: refs("roster")}
+		return layout.ScreenSpec{Layout: "flex-columns", Panes: refs("purse", "chart", "flow", "builder", "queue", "book", "ticket", "positions", "pnl", "roster", "ledger")}
 	}
 	return layout.ScreenSpec{Layout: "single"}
 }
@@ -108,10 +100,6 @@ func paneRegistryKeys(id string) []layout.PaneInfo {
 		return gamePanesReg.PaneKeys()
 	case screenTrade:
 		return tradePanesReg.PaneKeys()
-	case screenSpec:
-		return specPanesReg.PaneKeys()
-	case screenAgents:
-		return agentsPanesReg.PaneKeys()
 	}
 	return nil
 }
@@ -122,10 +110,6 @@ func layoutKeys(id string) []string {
 		return gamePanesReg.LayoutKeys()
 	case screenTrade:
 		return tradePanesReg.LayoutKeys()
-	case screenSpec:
-		return specPanesReg.LayoutKeys()
-	case screenAgents:
-		return agentsPanesReg.LayoutKeys()
 	}
 	return nil
 }

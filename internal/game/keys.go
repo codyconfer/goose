@@ -14,15 +14,10 @@ const (
 	actMaxCall    keys.Action = "game.max_call"
 	actMaxPut     keys.Action = "game.max_put"
 	actOpenTrade  keys.Action = "game.open_trade"
-	actOpenAgents keys.Action = "game.open_agents"
 	actOpenLayout keys.Action = "game.open_layout"
 
-	actToggleKind  keys.Action = "desk.toggle_kind"
 	actCancelOrder keys.Action = "desk.cancel"
-	actClearQueue  keys.Action = "trade.clear"
-	actOpenSpec    keys.Action = "trade.open_spec"
-	actClosePos    keys.Action = "spec.close"
-	actCloseAll    keys.Action = "spec.close_all"
+	actClearQueue  keys.Action = "desk.clear"
 
 	actMenuNew    keys.Action = "menu.new"
 	actMenuRename keys.Action = "menu.rename"
@@ -35,13 +30,6 @@ const (
 	actLayoutSave keys.Action = "layout.save"
 	actLayoutSlim keys.Action = "layout.slim"
 )
-
-func toggleBinding(action keys.Action, label string) keys.Binding {
-	sc := keys.Cur()
-	left, right := sc.Binding(keys.Left), sc.Binding(keys.Right)
-	combined := append(append([]string{}, left.Keys...), right.Keys...)
-	return keys.Binding{Keys: combined, Action: action, Glyph: left.Glyph, Label: label}
-}
 
 func gameKeymap() *keys.Map {
 	sc := keys.Cur()
@@ -59,7 +47,6 @@ func gameKeymap() *keys.Map {
 		keys.Binding{Keys: []string{"O", "C"}, Action: actMaxCall, Glyph: "O/C", Label: "max call"},
 		keys.Binding{Keys: []string{"P"}, Action: actMaxPut, Glyph: "P", Label: "max put"},
 		keys.Binding{Keys: []string{"t"}, Action: actOpenTrade, Glyph: "t", Label: "trade"},
-		keys.Binding{Keys: []string{"a"}, Action: actOpenAgents, Glyph: "a", Label: "agents"},
 		keys.Binding{Keys: []string{"L"}, Action: actOpenLayout, Glyph: "L", Label: "layout"},
 	)
 }
@@ -86,53 +73,22 @@ func characterNotifyKeymap() *keys.Map {
 	)
 }
 
-func agentsKeymap() *keys.Map {
-	sc := keys.Cur()
-	return keys.NewMap(
-		keys.Binding{Keys: []string{"ctrl+c"}, Action: keys.Quit},
-		keys.Binding{Keys: []string{"esc", "a", "q"}, Action: keys.Cancel, Glyph: "esc/a/q", Label: "back"},
-		sc.Binding(keys.Up).WithLabel("select"),
-		sc.Binding(keys.Down),
-		sc.Binding(keys.Confirm).WithLabel("hire/bench"),
-		sc.Binding(keys.Left).WithLabel("size"),
-		sc.Binding(keys.Right),
-		sc.Binding(keys.Inc).WithLabel("threshold"),
-		sc.Binding(keys.Dec),
-	)
-}
-
-func tradeKeymap() *keys.Map {
+func deskKeymap() *keys.Map {
 	sc := keys.Cur()
 	return keys.NewMap(
 		keys.Binding{Keys: []string{"ctrl+c"}, Action: keys.Quit},
 		keys.Binding{Keys: []string{"esc", "t", "q"}, Action: keys.Cancel, Glyph: "esc/t/q", Label: "back"},
-		toggleBinding(actToggleKind, "buy/sell"),
 		sc.Binding(keys.Up),
 		sc.Binding(keys.Down),
+		sc.Binding(keys.Left),
+		sc.Binding(keys.Right),
 		sc.Binding(keys.FocusNext),
 		sc.Binding(keys.FocusPrev),
+		sc.Binding(keys.Inc),
+		sc.Binding(keys.Dec),
 		sc.Binding(keys.Confirm).WithLabel("queue"),
 		keys.Binding{Keys: []string{"x"}, Action: actCancelOrder, Glyph: "x", Label: "cancel"},
 		keys.Binding{Keys: []string{"c"}, Action: actClearQueue, Glyph: "c", Label: "clear"},
-		keys.Binding{Keys: []string{"d"}, Action: actOpenSpec, Glyph: "d", Label: "derivatives"},
-	)
-}
-
-func specKeymap() *keys.Map {
-	sc := keys.Cur()
-	return keys.NewMap(
-		keys.Binding{Keys: []string{"ctrl+c"}, Action: keys.Quit},
-		keys.Binding{Keys: []string{"esc", "d", "q"}, Action: keys.Cancel, Glyph: "esc/d/q", Label: "back"},
-		toggleBinding(actToggleKind, "call/put"),
-		sc.Binding(keys.Up),
-		sc.Binding(keys.Down),
-		sc.Binding(keys.FocusNext),
-		sc.Binding(keys.FocusPrev),
-		sc.Binding(keys.Inc).WithLabel("leverage"),
-		sc.Binding(keys.Dec),
-		sc.Binding(keys.Confirm).WithLabel("open"),
-		keys.Binding{Keys: []string{"x"}, Action: actClosePos, Glyph: "x", Label: "close"},
-		keys.Binding{Keys: []string{"c"}, Action: actCloseAll, Glyph: "c", Label: "close all"},
 	)
 }
 

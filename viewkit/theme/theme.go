@@ -17,45 +17,84 @@ const (
 	RuleWidth = BodyWidth + 4
 )
 
-var (
-	gold   = lipgloss.Color("220")
-	dim    = lipgloss.Color("245")
-	gray   = lipgloss.Color("252")
-	gn     = lipgloss.Color("78")
-	rd     = lipgloss.Color("203")
-	purple = lipgloss.Color("141")
-	orange = lipgloss.Color("208")
+type Palette struct {
+	Accent   lipgloss.Color
+	Border   lipgloss.Color
+	Muted    lipgloss.Color
+	Text     lipgloss.Color
+	Selected lipgloss.Color
+	Success  lipgloss.Color
+	Warning  lipgloss.Color
+	Failure  lipgloss.Color
+	Info     lipgloss.Color
+	Series2  lipgloss.Color
+	Bg       lipgloss.Color
+}
 
-	TitleSty  = lipgloss.NewStyle().Bold(true).Foreground(gold)
-	AccentSty = lipgloss.NewStyle().Bold(true).Foreground(gold)
-	DimSty    = lipgloss.NewStyle().Foreground(dim)
-	ValSty    = lipgloss.NewStyle().Foreground(gray)
-	KeySty    = lipgloss.NewStyle().Bold(true).Foreground(gold)
-	CanSty    = lipgloss.NewStyle().Foreground(gn)
-	CantSty   = lipgloss.NewStyle().Foreground(rd)
+func New(p Palette) Theme {
+	return Theme{
+		Title:  lipgloss.NewStyle().Bold(true).Foreground(p.Accent),
+		Accent: lipgloss.NewStyle().Bold(true).Foreground(p.Accent),
+		Dim:    lipgloss.NewStyle().Foreground(p.Muted),
+		Val:    lipgloss.NewStyle().Foreground(p.Text),
+		Key:    lipgloss.NewStyle().Bold(true).Foreground(p.Accent),
+		Can:    lipgloss.NewStyle().Foreground(p.Success),
+		Cant:   lipgloss.NewStyle().Foreground(p.Failure),
 
-	AppFrame = lipgloss.NewStyle().Margin(AppMarginY, AppMarginX)
+		Panel:      lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p.Border).Padding(0, 1).Width(BodyWidth + 2),
+		PanelFocus: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p.Selected).Padding(0, 1).Width(BodyWidth + 2),
+		PanelTitle: lipgloss.NewStyle().Bold(true).Foreground(p.Accent),
+		Card:       lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p.Accent).Padding(0, 1).Width(BodyWidth + 2).Align(lipgloss.Center),
+		AppFrame:   lipgloss.NewStyle().Margin(AppMarginY, AppMarginX),
 
-	PanelSty      = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(dim).Padding(0, 1).Width(BodyWidth + 2)
-	PanelFocusSty = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(gold).Padding(0, 1).Width(BodyWidth + 2)
-	PanelTitleSty = lipgloss.NewStyle().Bold(true).Foreground(gold)
-	CardSty       = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(gold).Padding(0, 1).Width(BodyWidth + 2).Align(lipgloss.Center)
+		NotifPositive: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p.Success).Foreground(p.Success).Padding(0, 1),
+		NotifNeutral:  lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p.Info).Foreground(p.Info).Padding(0, 1),
+		NotifWarning:  lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p.Warning).Foreground(p.Warning).Padding(0, 1),
+		NotifNegative: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p.Failure).Foreground(p.Failure).Padding(0, 1),
+		NotifIdle:     lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p.Muted).Foreground(p.Muted).Padding(0, 1),
+		NotifTitle:    lipgloss.NewStyle().Bold(true),
 
-	NotifPositiveSty = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(gn).Foreground(gn).Padding(0, 1)
-	NotifNeutralSty  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(purple).Foreground(purple).Padding(0, 1)
-	NotifWarningSty  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(orange).Foreground(orange).Padding(0, 1)
-	NotifNegativeSty = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(rd).Foreground(rd).Padding(0, 1)
-	NotifIdleSty     = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(dim).Foreground(dim).Padding(0, 1)
-	NotifTitleSty    = lipgloss.NewStyle().Bold(true)
+		Series: []lipgloss.Style{
+			lipgloss.NewStyle().Foreground(p.Accent),
+			lipgloss.NewStyle().Foreground(p.Success),
+			lipgloss.NewStyle().Foreground(p.Warning),
+			lipgloss.NewStyle().Foreground(p.Failure),
+			lipgloss.NewStyle().Foreground(p.Series2),
+			lipgloss.NewStyle().Foreground(p.Muted),
+		},
 
-	Series = []lipgloss.Style{
-		lipgloss.NewStyle().Foreground(gold),
-		lipgloss.NewStyle().Foreground(gn),
-		lipgloss.NewStyle().Foreground(purple),
-		lipgloss.NewStyle().Foreground(orange),
-		lipgloss.NewStyle().Foreground(rd),
-		lipgloss.NewStyle().Foreground(gray),
+		Bg: p.Bg,
+
+		TooNarrowTitle: DefaultTooNarrowTitle,
+		TooNarrowNeed:  DefaultTooNarrowNeed,
+		TooNarrowBody:  DefaultTooNarrowBody,
 	}
+}
+
+var (
+	TitleSty  lipgloss.Style
+	AccentSty lipgloss.Style
+	DimSty    lipgloss.Style
+	ValSty    lipgloss.Style
+	KeySty    lipgloss.Style
+	CanSty    lipgloss.Style
+	CantSty   lipgloss.Style
+
+	AppFrame lipgloss.Style
+
+	PanelSty      lipgloss.Style
+	PanelFocusSty lipgloss.Style
+	PanelTitleSty lipgloss.Style
+	CardSty       lipgloss.Style
+
+	NotifPositiveSty lipgloss.Style
+	NotifNeutralSty  lipgloss.Style
+	NotifWarningSty  lipgloss.Style
+	NotifNegativeSty lipgloss.Style
+	NotifIdleSty     lipgloss.Style
+	NotifTitleSty    lipgloss.Style
+
+	Series []lipgloss.Style
 )
 
 const (
@@ -88,44 +127,46 @@ type Theme struct {
 
 	Series []lipgloss.Style
 
+	Bg lipgloss.Color
+
 	TooNarrowTitle string
 	TooNarrowNeed  string
 	TooNarrowBody  string
 }
 
-func Default() Theme {
-	return Theme{
-		Title:  TitleSty,
-		Accent: AccentSty,
-		Dim:    DimSty,
-		Val:    ValSty,
-		Key:    KeySty,
-		Can:    CanSty,
-		Cant:   CantSty,
+func Default() Theme { return New(muninPalette) }
 
-		Panel:      PanelSty,
-		PanelFocus: PanelFocusSty,
-		PanelTitle: PanelTitleSty,
-		Card:       CardSty,
-		AppFrame:   AppFrame,
-
-		NotifPositive: NotifPositiveSty,
-		NotifNeutral:  NotifNeutralSty,
-		NotifWarning:  NotifWarningSty,
-		NotifNegative: NotifNegativeSty,
-		NotifIdle:     NotifIdleSty,
-		NotifTitle:    NotifTitleSty,
-
-		Series: Series,
-
-		TooNarrowTitle: DefaultTooNarrowTitle,
-		TooNarrowNeed:  DefaultTooNarrowNeed,
-		TooNarrowBody:  DefaultTooNarrowBody,
-	}
-}
-
-var current = func() *Theme { t := Default(); return &t }()
+var current = func() *Theme { t := Default(); syncExported(t); return &t }()
 
 func Cur() *Theme { return current }
 
-func Use(t Theme) { current = &t }
+func Use(t Theme) {
+	current = &t
+	syncExported(t)
+}
+
+func syncExported(t Theme) {
+	TitleSty = t.Title
+	AccentSty = t.Accent
+	DimSty = t.Dim
+	ValSty = t.Val
+	KeySty = t.Key
+	CanSty = t.Can
+	CantSty = t.Cant
+
+	AppFrame = t.AppFrame
+
+	PanelSty = t.Panel
+	PanelFocusSty = t.PanelFocus
+	PanelTitleSty = t.PanelTitle
+	CardSty = t.Card
+
+	NotifPositiveSty = t.NotifPositive
+	NotifNeutralSty = t.NotifNeutral
+	NotifWarningSty = t.NotifWarning
+	NotifNegativeSty = t.NotifNegative
+	NotifIdleSty = t.NotifIdle
+	NotifTitleSty = t.NotifTitle
+
+	Series = t.Series
+}
