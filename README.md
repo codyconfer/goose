@@ -182,10 +182,6 @@ Linux AppImage targets require `appimagetool` on `PATH`, or set
 Build metadata is compiled into the binary and is available with
 `goose --version`.
 
-## Contributing
-
-Contributions are welcome — see [CONTRIBUTORS.md](CONTRIBUTORS.md).
-
 ## License
 
 🪿 goose is licensed under the [GNU Affero General Public License v3.0](LICENSE).
