@@ -1,4 +1,0 @@
-interface:
-  display_name: "Viewkit Notify"
-  short_description: "Show transient notifications in viewkit"
-  default_prompt: "Use $viewkit-notify to add toast notifications or a TTL queue to this viewkit app."

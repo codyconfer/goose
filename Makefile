@@ -1,6 +1,5 @@
 APP := goose
-# GOWORK=off so the workspace (go.work) doesn't list the viewkit module too.
-MODULE := $(shell GOWORK=off go list -m)
+MODULE := $(shell go list -m)
 BASE_VERSION ?= 0.1.0
 VERSION ?= $(shell BASE_VERSION=$(BASE_VERSION) ./scripts/semver.sh)
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
@@ -12,7 +11,7 @@ APPIMAGE_TEMPLATE_DIR := packaging/linux/appimage
 APPIMAGETOOL ?= appimagetool
 GOLANGCI := go tool golangci-lint
 GOVULNCHECK := go tool govulncheck
-GO_MODULES ?= . viewkit
+GO_MODULES ?= .
 LDFLAGS := -s -w -X '$(MODULE)/internal/buildinfo.Version=$(VERSION)' -X '$(MODULE)/internal/buildinfo.Commit=$(COMMIT)' -X '$(MODULE)/internal/buildinfo.Date=$(BUILD_DATE)' -X '$(MODULE)/internal/buildinfo.Dirty=$(DIRTY)'
 
 BUMP ?= patch

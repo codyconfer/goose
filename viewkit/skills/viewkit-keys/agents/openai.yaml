@@ -1,4 +1,0 @@
-interface:
-  display_name: "Viewkit Keys"
-  short_description: "Define viewkit keymaps and hint legends"
-  default_prompt: "Use $viewkit-keys to add keybindings and footer hints for this viewkit screen."

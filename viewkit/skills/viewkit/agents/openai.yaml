@@ -1,4 +1,0 @@
-interface:
-  display_name: "Viewkit"
-  short_description: "Guide for building Go terminal UIs with viewkit"
-  default_prompt: "Use $viewkit to route this change to the right viewkit skill before editing the TUI code."

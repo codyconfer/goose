@@ -12,8 +12,6 @@ obj/
 *.dylib
 *.test
 *.out
-# go.work / go.work.sum are committed on purpose: the goose module depends on
-# the in-repo viewkit module via this workspace until viewkit is published.
 .local/
 .vscode/
 .idea/

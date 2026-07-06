@@ -1,4 +1,0 @@
-interface:
-  display_name: "Viewkit Pane"
-  short_description: "Add and wire panes in viewkit screens"
-  default_prompt: "Use $viewkit-pane to add or modify a pane in this viewkit screen layout."
