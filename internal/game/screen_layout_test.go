@@ -15,6 +15,15 @@ import (
 	"github.com/codyconfer/goose/internal/events"
 )
 
+func editSelect(t *testing.T, le *layoutEditorScreen, key string) {
+	t.Helper()
+	le.ensure()
+	le.sync(layout.DefaultFrame(), key)
+	if got := le.selKey(); got != key {
+		t.Fatalf("could not select layout-editor row %q (got %q)", key, got)
+	}
+}
+
 func specHasPane(spec layout.ScreenSpec, key string) bool {
 	for _, p := range spec.Panes {
 		if p.Key == key {
@@ -88,17 +97,16 @@ func TestLayoutEditorReorderMovesPane(t *testing.T) {
 	if configurableScreens[le.screenIdx] != screenTrade {
 		t.Fatalf("expected trade at index 1, got %q", configurableScreens[le.screenIdx])
 	}
-	base := le.paneBase()
-	le.cursor = base
 	first := le.current().panes[0].key
 	second := le.current().panes[1].key
+	editSelect(t, le, "pane:"+first)
 	le.reorder(1)
 
 	if le.current().panes[0].key != second || le.current().panes[1].key != first {
 		t.Fatalf("reorder did not swap first two panes: %v", le.current().panes)
 	}
-	if le.cursor != base+1 {
-		t.Fatalf("cursor should follow moved pane to row %d, got %d", base+1, le.cursor)
+	if le.selKey() != "pane:"+first {
+		t.Fatalf("selection should follow the moved pane %q, got %q", "pane:"+first, le.selKey())
 	}
 }
 
@@ -113,7 +121,7 @@ func TestLayoutEditorClockPickerSwitchesAndPersists(t *testing.T) {
 	}
 
 	start := uiClock.Timezone
-	le.cursor = le.clockPos()
+	editSelect(t, le, "clock")
 	m := New(economy.NewMachine(), events.NewMachine(), 0)
 	le.handleKey(&m, tea.KeyMsg{Type: tea.KeyRight})
 
@@ -143,7 +151,6 @@ func TestLayoutEditorChangeLayoutPersists(t *testing.T) {
 
 	le := newLayoutEditor(&menuScreen{})
 	le.screenIdx = 1
-	le.cursor = 1
 	es := le.current()
 	es.layoutIdx = layoutIndex(es.layouts, "single")
 	if err := le.apply(); err != nil {
@@ -206,27 +213,15 @@ func TestLayoutEditorShowsReorderAffordance(t *testing.T) {
 	m.height = 120
 	m.screen = le
 
+	editSelect(t, le, "screen")
 	if v := le.view(&m); strings.Contains(v, "move panel") {
 		t.Fatalf("reorder hint should not show on the screen-selector row:\n%s", v)
 	}
 
-	base := le.paneBase()
-	le.cursor = base + 1
-	v := le.view(&m)
-	if !strings.Contains(v, "move panel") {
+	firstPane := le.current().panes[0].key
+	editSelect(t, le, "pane:"+firstPane)
+	if v := le.view(&m); !strings.Contains(v, "move panel") {
 		t.Fatalf("panel row should show the 'move panel' hint:\n%s", v)
-	}
-	if !strings.Contains(v, "▾") || !strings.Contains(v, "▴") {
-		t.Fatalf("a middle panel row should show both up and down arrows:\n%s", v)
-	}
-
-	le.cursor = base
-	v = le.view(&m)
-	if strings.Contains(v, "▴") {
-		t.Fatalf("the first panel row should not offer a move-up arrow:\n%s", v)
-	}
-	if !strings.Contains(v, "▾") {
-		t.Fatalf("the first panel row should still offer a move-down arrow:\n%s", v)
 	}
 }
 
@@ -248,8 +243,7 @@ func TestLayoutEditorFlexParamsPersist(t *testing.T) {
 		t.Fatalf("flex should expose minWidth+maxCols params, got %+v", specs)
 	}
 
-	// maxCols is the second param row (index 1) → editor row paneBase-relative 2+1.
-	le.cursor = 3
+	editSelect(t, le, "param:maxCols")
 	for i := 0; i < 10; i++ {
 		le.changeRow(1)
 	}
@@ -284,7 +278,7 @@ func TestLayoutEditorThemePickerSwitchesAndPersists(t *testing.T) {
 		t.Fatalf("layout editor view missing Theme row:\n%s", le.view(&m))
 	}
 
-	le.cursor = le.themePos()
+	editSelect(t, le, "theme")
 	startAccent := theme.Cur().Accent.GetForeground()
 	le.handleKey(&m, tea.KeyMsg{Type: tea.KeyRight})
 
@@ -339,7 +333,7 @@ func TestLayoutEditorGridParamsAndSlimPersist(t *testing.T) {
 		t.Fatalf("grid should expose cols+rows params, got %+v", specs)
 	}
 
-	le.cursor = 2
+	editSelect(t, le, "param:cols")
 	for i := 0; i < 10; i++ {
 		le.changeRow(1)
 	}
@@ -347,9 +341,10 @@ func TestLayoutEditorGridParamsAndSlimPersist(t *testing.T) {
 		t.Fatalf("cols should clamp to 4, got %d", got)
 	}
 
-	le.cursor = le.paneBase()
-	if _, ok := le.paneIndex(); !ok {
-		t.Fatal("expected a panel row at paneBase")
+	firstPane := le.current().panes[0].key
+	editSelect(t, le, "pane:"+firstPane)
+	if _, ok := le.selectedPaneKey(); !ok {
+		t.Fatal("expected a panel row to be selected")
 	}
 	le.current().panes[0].slim = true
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/codyconfer/viewkit/forms"
 	"github.com/codyconfer/viewkit/keys"
+	"github.com/codyconfer/viewkit/list"
 	"github.com/codyconfer/viewkit/panels"
 
 	"github.com/codyconfer/goose/internal/content"
@@ -32,7 +33,8 @@ type menuItem struct {
 
 type menuScreen struct {
 	items   []menuItem
-	cursor  int
+	list    list.Model
+	ready   bool
 	rename  *forms.Form
 	confirm *forms.Confirm
 	target  store.SaveInfo
@@ -40,7 +42,54 @@ type menuScreen struct {
 
 func (ms *menuScreen) simulates() bool { return false }
 
+func menuItemKey(it menuItem) string {
+	switch it.action {
+	case menuNew:
+		return "new"
+	case menuExit:
+		return "exit"
+	case menuSave:
+		return fmt.Sprintf("save:%d", it.save.ID)
+	}
+	return ""
+}
+
+func (ms *menuScreen) ensure() {
+	if ms.ready {
+		return
+	}
+	ms.list = list.New()
+	ms.list.SetFocused(true)
+	ms.syncItems("")
+	ms.ready = true
+}
+
+func (ms *menuScreen) syncItems(sel string) {
+	items := make([]list.Item, len(ms.items))
+	for i, it := range ms.items {
+		items[i] = list.Item{Block: menuLabel(it), Key: menuItemKey(it), Selectable: true}
+	}
+	ms.list.SetItems(items)
+	if sel != "" {
+		selectListKey(&ms.list, sel)
+	}
+}
+
+func (ms *menuScreen) selected() (menuItem, bool) {
+	it, ok := ms.list.Selected()
+	if !ok {
+		return menuItem{}, false
+	}
+	for _, mi := range ms.items {
+		if menuItemKey(mi) == it.Key {
+			return mi, true
+		}
+	}
+	return menuItem{}, false
+}
+
 func (ms *menuScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
+	ms.ensure()
 	if ms.rename != nil {
 		return ms.handleRename(m, msg)
 	}
@@ -85,9 +134,9 @@ func (ms *menuScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		m.flash = ""
 		m.screen = newLayoutEditor(ms)
 	case keys.Up:
-		ms.cursor = panels.MoveIndex(ms.cursor, -1, len(ms.items))
+		ms.list.Move(-1)
 	case keys.Down:
-		ms.cursor = panels.MoveIndex(ms.cursor, 1, len(ms.items))
+		ms.list.Move(1)
 	case keys.Confirm:
 		return ms.choose(m)
 	}
@@ -95,11 +144,11 @@ func (ms *menuScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 }
 
 func (ms *menuScreen) choose(m *Model) tea.Cmd {
-	if len(ms.items) == 0 {
+	it, ok := ms.selected()
+	if !ok {
 		return nil
 	}
-	ms.cursor = panels.ClampIndex(ms.cursor, len(ms.items))
-	switch it := ms.items[ms.cursor]; it.action {
+	switch it.action {
 	case menuNew:
 		return ms.startNew(m)
 	case menuSave:
@@ -165,10 +214,8 @@ func (ms *menuScreen) handleRename(m *Model, msg tea.KeyMsg) tea.Cmd {
 		if m.saveID == ms.target.ID {
 			m.saveName = name
 		}
-		id := ms.target.ID
 		ms.rename = nil
 		m.refreshSaves(ms)
-		ms.selectSave(id)
 	case keys.Cancel:
 		ms.rename = nil
 	case keys.Erase:
@@ -206,8 +253,9 @@ func (ms *menuScreen) handleConfirm(m *Model, msg tea.KeyMsg) tea.Cmd {
 }
 
 func (ms *menuScreen) view(m *Model) string {
+	ms.ensure()
 	vk := m.frame()
-	cursor := panels.ClampIndex(ms.cursor, len(ms.items))
+	ms.list.SetSize(vk.Width, 0)
 	var b strings.Builder
 	b.WriteString(vk.Header(content.Text.App.Title, content.Text.App.Tagline))
 	b.WriteString("\n\n")
@@ -221,9 +269,8 @@ func (ms *menuScreen) view(m *Model) string {
 		b.WriteString("\n\n")
 	}
 
-	for i, it := range ms.items {
-		b.WriteString(vk.Selectable(menuLabel(it), i == cursor) + "\n")
-	}
+	b.WriteString(ms.list.View())
+	b.WriteString("\n")
 	if m.flash != "" {
 		b.WriteString("\n")
 		b.WriteString(panels.Flash(vk.Fit(m.flash)))
@@ -268,23 +315,11 @@ func menuItems(saves []store.SaveInfo) []menuItem {
 }
 
 func (ms *menuScreen) selectedSave() (store.SaveInfo, bool) {
-	if ms.cursor < 0 || ms.cursor >= len(ms.items) {
-		return store.SaveInfo{}, false
-	}
-	it := ms.items[ms.cursor]
-	if it.action != menuSave {
+	it, ok := ms.selected()
+	if !ok || it.action != menuSave {
 		return store.SaveInfo{}, false
 	}
 	return it.save, true
-}
-
-func (ms *menuScreen) selectSave(id int64) {
-	for i, it := range ms.items {
-		if it.action == menuSave && it.save.ID == id {
-			ms.cursor = i
-			return
-		}
-	}
 }
 
 func menuLabel(it menuItem) string {

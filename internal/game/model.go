@@ -328,12 +328,12 @@ func (m *Model) refreshSaves(ms *menuScreen) {
 	}
 	m.saves = saves
 	ms.items = menuItems(saves)
-	if ms.cursor >= len(ms.items) {
-		ms.cursor = len(ms.items) - 1
+	ms.ensure()
+	sel := ""
+	if it, ok := ms.list.Selected(); ok {
+		sel = it.Key
 	}
-	if ms.cursor < 0 {
-		ms.cursor = 0
-	}
+	ms.syncItems(sel)
 }
 
 func (m Model) nextVisible(from int) int {

@@ -36,6 +36,7 @@ func assertContains(t *testing.T, name, view string, wants ...string) {
 }
 
 func TestGameScreenFitsMinHeight(t *testing.T) {
+	isolateHome(t)
 	s := economy.NewState()
 	s.Tokens = 1_000_000
 	s.Eggs = 500
@@ -49,6 +50,7 @@ func TestGameScreenFitsMinHeight(t *testing.T) {
 }
 
 func TestGameScreenFrozenFitsMinHeight(t *testing.T) {
+	isolateHome(t)
 	s := economy.NewState()
 	s.Tokens = 1_000_000
 	s.Eggs = 500
@@ -64,6 +66,7 @@ func TestGameScreenFrozenFitsMinHeight(t *testing.T) {
 }
 
 func TestTradeDeskFitsMinHeightAndDropsChart(t *testing.T) {
+	isolateHome(t)
 	s := economy.NewState()
 	s.Tokens = 1000
 	econ := economy.FromState(s)
@@ -81,6 +84,7 @@ func TestTradeDeskFitsMinHeightAndDropsChart(t *testing.T) {
 }
 
 func TestTradeDeskShowsEverythingWhenTall(t *testing.T) {
+	isolateHome(t)
 	s := economy.NewState()
 	s.Tokens = 1000
 	econ := economy.FromState(s)
@@ -99,6 +103,7 @@ func TestTradeDeskShowsEverythingWhenTall(t *testing.T) {
 }
 
 func TestSpecDeskFitsMinHeight(t *testing.T) {
+	isolateHome(t)
 	econ := economy.FromState(leveledState())
 	econ.OpenPosition(economy.PosCall, 50, 5, 60)
 	m := New(econ, events.NewMachine(), 0)
@@ -113,6 +118,7 @@ func TestSpecDeskFitsMinHeight(t *testing.T) {
 }
 
 func TestGameScreenShortTierDropsMediumPanels(t *testing.T) {
+	isolateHome(t)
 	s := economy.NewState()
 	s.Tokens = 1_000_000
 	s.Eggs = 500
@@ -132,7 +138,7 @@ func TestGameScreenShortTierDropsMediumPanels(t *testing.T) {
 }
 
 func TestStartupUnknownHeightFitsEssentials(t *testing.T) {
-
+	isolateHome(t)
 	m := New(economy.NewMachine(), events.NewMachine(), 0)
 	m.width = theme.MinScreenWidth
 

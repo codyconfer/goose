@@ -1,11 +1,13 @@
 package game
 
 import (
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/codyconfer/viewkit/keys"
+	"github.com/codyconfer/viewkit/list"
 	"github.com/codyconfer/viewkit/notify"
 	"github.com/codyconfer/viewkit/panels"
 	"github.com/codyconfer/viewkit/theme"
@@ -16,13 +18,40 @@ import (
 
 type characterScreen struct {
 	char         *characters.Character
-	cursor       int
+	list         list.Model
+	ready        bool
 	notification *notify.Notification
 	outcomeTTL   int
 	prev         *gameScreen
 }
 
 func (cs *characterScreen) simulates() bool { return true }
+
+func (cs *characterScreen) ensure() {
+	if cs.ready {
+		return
+	}
+	cs.list = list.New()
+	cs.list.SetFocused(true)
+	items := make([]list.Item, len(cs.char.Options))
+	for i, opt := range cs.char.Options {
+		items[i] = list.Item{Block: opt.Label, Key: strconv.Itoa(i), Selectable: true}
+	}
+	cs.list.SetItems(items)
+	cs.ready = true
+}
+
+func (cs *characterScreen) selectedIndex() (int, bool) {
+	it, ok := cs.list.Selected()
+	if !ok {
+		return 0, false
+	}
+	idx, err := strconv.Atoi(it.Key)
+	if err != nil || idx < 0 || idx >= len(cs.char.Options) {
+		return 0, false
+	}
+	return idx, true
+}
 
 func (cs *characterScreen) tick(m *Model) {
 	if cs.notification == nil || cs.outcomeTTL <= 0 {
@@ -35,6 +64,7 @@ func (cs *characterScreen) tick(m *Model) {
 }
 
 func (cs *characterScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
+	cs.ensure()
 	if cs.notification != nil {
 		action, ok := characterNotifyKeymap().Action(msg.String())
 		if !ok {
@@ -62,15 +92,15 @@ func (cs *characterScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 		_ = m.save()
 		return tea.Quit
 	case keys.Up:
-		cs.cursor = panels.MoveIndex(cs.cursor, -1, len(cs.char.Options))
+		cs.list.Move(-1)
 	case keys.Down:
-		cs.cursor = panels.MoveIndex(cs.cursor, 1, len(cs.char.Options))
+		cs.list.Move(1)
 	case keys.Confirm:
-		if len(cs.char.Options) == 0 {
+		idx, ok := cs.selectedIndex()
+		if !ok {
 			return nil
 		}
-		cs.cursor = panels.ClampIndex(cs.cursor, len(cs.char.Options))
-		out := cs.char.Options[cs.cursor].Resolve(m.econ.Get(), m.rng)
+		out := cs.char.Options[idx].Resolve(m.econ.Get(), m.rng)
 		m.econ.ApplyWindfall(out.Notif.Title, out.Cmds)
 		cs.notification = &out.Notif
 		cs.outcomeTTL = characterTimeoutBeats
@@ -79,8 +109,9 @@ func (cs *characterScreen) handleKey(m *Model, msg tea.KeyMsg) tea.Cmd {
 }
 
 func (cs *characterScreen) view(m *Model) string {
+	cs.ensure()
 	vk := m.frame()
-	cursor := panels.ClampIndex(cs.cursor, len(cs.char.Options))
+	cs.list.SetSize(vk.Width, 0)
 	var b strings.Builder
 	b.WriteString(vk.Header(cs.char.Headline))
 	b.WriteString("\n\n")
@@ -97,11 +128,10 @@ func (cs *characterScreen) view(m *Model) string {
 
 	b.WriteString(theme.DimSty.Render(content.Text.Character.Prompt))
 	b.WriteString("\n\n")
-	for i, opt := range cs.char.Options {
-		b.WriteString(vk.Selectable(opt.Label, i == cursor) + "\n")
-		if i == cursor {
-			b.WriteString(theme.DimSty.Width(vk.Width-5).MarginLeft(5).Render(opt.Desc) + "\n")
-		}
+	b.WriteString(cs.list.View())
+	b.WriteString("\n")
+	if idx, ok := cs.selectedIndex(); ok {
+		b.WriteString(theme.DimSty.Width(vk.Width-5).MarginLeft(5).Render(cs.char.Options[idx].Desc) + "\n")
 	}
 	b.WriteString("\n")
 	km := characterKeymap()

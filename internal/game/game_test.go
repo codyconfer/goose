@@ -323,8 +323,8 @@ func TestMenuCursorClamps(t *testing.T) {
 	isolateHome(t)
 	m := NewMenu()
 	m = send(m, key("up"))
-	if c := m.screen.(*menuScreen).cursor; c != 0 {
-		t.Fatalf("cursor went above top: %d", c)
+	if it, ok := m.screen.(*menuScreen).selected(); !ok || it.action != menuNew {
+		t.Fatalf("cursor went above top: %+v (ok=%v)", it, ok)
 	}
 }
 
